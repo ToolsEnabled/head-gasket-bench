@@ -33,6 +33,9 @@ EXPLORATORY = {
     'claude-haiku-5-5-proxy-r1': {'model_label': 'claude-haiku-5-5', 'client': 'Claude Code', 'date': '2026-10-14'},
     'claude-haiku-5-5-proxy-r2': {'model_label': 'claude-haiku-5-5', 'client': 'Claude Code', 'date': '2026-10-14'},
     'claude-haiku-5-5-proxy-r3': {'model_label': 'claude-haiku-5-5', 'client': 'Claude Code', 'date': '2026-10-14'},
+    # Five runs of claude-opus-5-5 at effort max, the same harness as the baseline (see each RESULT.md).
+    **{f'claude-opus-5-5-max-proxy-o{i}': {'model_label': 'claude-opus-5-5', 'client': 'Claude Code (effort max)',
+                                           'date': '2026-10-14'} for i in range(1, 6)},
 }
 
 

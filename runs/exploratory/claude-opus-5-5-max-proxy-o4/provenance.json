@@ -1,0 +1,39 @@
+{
+  "client_reported": {
+    "api_equivalent_cost_usd": 8.4357646,
+    "duration_ms": 701411,
+    "model_turns": 372,
+    "note": "as reported by the client at the end of the session; not a provider receipt",
+    "stop_reason": "end_turn"
+  },
+  "harness": {
+    "MAX_MCP_OUTPUT_TOKENS": 150000,
+    "built_in_tools": "disabled (--tools \"\")",
+    "client": "Claude Code 2.1.300",
+    "effort": "max (--effort max)",
+    "mode": "headless (claude -p), stream-json",
+    "model_requested": "claude-opus-5-5",
+    "permission_mode": "dontAsk, allowed: the headgasket MCP server only",
+    "prompt": "the task prompt in env/README.md, verbatim",
+    "proxy": "tools/claude-code-proxy.py: adds _meta anthropic/maxResultSizeChars 400000 to each tool in tools/list and passes every message through unchanged",
+    "tool_results_saved_to_file_by_client": 0,
+    "tools_available": 18
+  },
+  "kind": "exploratory run by ToolsEnabled",
+  "published_files": [
+    "RESULT.md",
+    "environment-score.json",
+    "independent-score.json",
+    "provenance.json"
+  ],
+  "run": "claude-opus-5-5-max-proxy-o4",
+  "schema": "head-gasket-bench/exploratory-provenance/v1",
+  "variant": "V1",
+  "verification": "before its files were withheld, the record passed tools/validate_submission.py of this repository (files, declaration, secrets, chain, duplicate, pins, exact replay, independent scorer revision refit-preparation-20261010+cp02-20261014: primary agreement, no determined shared-field disagreement)",
+  "withheld_files": {
+    "actions.jsonl": "50ccb7e7e4578329ff0898cc6d1ddba1d288f89eb06729669595eb3f62cf9684",
+    "report.json": "73e20add320a69a4c24a25f3127e51b567f38bd2351bc987f757b923dec84ce9",
+    "run.json": "0d6860ad2650a2b68ca9673f8cb141c9fc379e64062684b2b8612b3fa53a3fef"
+  },
+  "withheld_note": "The per-action journal and record of a model run are agent traces and are not published; their SHA-256 values are listed so a later release of the files can be checked against them."
+}

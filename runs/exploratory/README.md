@@ -1,9 +1,12 @@
 # Exploratory model runs: scored results only
 
-Three exploratory runs, one per requested model (GPT-6.1-Sol, GPT-6-Astra,
-GPT-6-Luna), on the standard job (V1), collected by ToolsEnabled on
-2026-10-10 under the amended runtime (`24a5713`). They are single runs: they
-describe behaviour and do not rank models.
+Eleven exploratory model runs by ToolsEnabled on the standard job (V1): the
+paper's three, one per requested model (GPT-6.1-Sol, GPT-6-Astra, GPT-6-Luna),
+collected on 2026-10-10 under the amended runtime (`24a5713`), and, outside the
+paper, three `claude-haiku-5-5` runs and five `claude-opus-5-5` runs through
+Claude Code, collected on 2026-10-14 under the current runtime. They describe
+behaviour and do not rank models. No run completed the job correctly; the best
+scored 16 of 18 (each of the five `claude-opus-5-5` runs).
 
 **The per-action journals are not published.** Agent traces stay private: each
 folder carries the scored results only.
@@ -37,6 +40,39 @@ above; `independent-score.json` holds one current scorer result, and
 turns, wall time and API-equivalent cost. Before their journals were withheld,
 each record passed `tools/validate_submission.py` (exact replay and the
 independent scorer).
+
+## `claude-opus-5-5` at effort max (five runs, 2026-10-14)
+
+`claude-opus-5-5-max-proxy-o1` to `-o5` are five runs by ToolsEnabled of
+`claude-opus-5-5` through Claude Code at effort `max` (`--effort max`), with the
+baseline's harness: headless, built-in tools disabled, only the 18 job tools,
+the task prompt from `env/README.md`, the server started through
+`tools/claude-code-proxy.py` and `MAX_MCP_OUTPUT_TOKENS=150000`. They ran one
+after another and ToolsEnabled stopped after the fifth. All five finished with 16
+of 18 points (Success 0) after 371 to 393 tool calls, and each failed only CP12
+(reassembly complete), in the same way: the agent removed the old head gasket and
+fitted the new gasket from supply with `install`, instead of exchanging the old
+gasket for it with `replace`. The environment therefore counted the gasket's
+service position as not refitted and refused every `restore_attachment` call, so
+none of the 100 attachments the agent had released was restored by `finish`; a
+late `replace` was refused because the new gasket was already installed. Each
+`RESULT.md` names the calls. The client reported an API-equivalent cost of $8.44
+to $10.28 per run ($45.94 for the five). The folders have the same four files as
+the baseline's. Before their journals were withheld, each record passed
+`tools/validate_submission.py` with this release's scorer (revision
+`refit-preparation-20261010+cp02-20261014`). The scorer of 0.1.1 gave them 14 of
+18, because it also failed CP02 on refused preparation and release attempts,
+which the environment and the paper's definition do not count
+(`../../scorer/PROVENANCE.md`).
+
+Three other `claude-opus-5-5` runs at effort max are not listed. Two ran before
+the proxy existed: Claude Code saved `look`'s result to a file and showed the
+model a 2 KB preview, so they measured the client, not the model (1 of 18 after
+181 tool calls, and 0 of 18 when ToolsEnabled stopped the second after 84). A
+third run through the proxy was stopped by ToolsEnabled before it finished and
+left no record.
+
+## Withdrawn `claude-haiku-5-5` runs
 
 Release 0.1.1 listed three other `claude-haiku-5-5` runs here (0/18 each, after
 69, 19 and 15 tool calls, with `MAX_MCP_OUTPUT_TOKENS=150000` but without the

@@ -1,0 +1,208 @@
+{
+  "S_full": 0,
+  "S_partial": 0.4444444444444444,
+  "budget": {
+    "attempted_calls": 392,
+    "exhausted": false,
+    "limit": 1024,
+    "unit": "job-tool-action-attempts",
+    "used": 392
+  },
+  "checklist": {
+    "accuracy_percent": 93.86763812993321,
+    "correct": 1546,
+    "total": 1647
+  },
+  "checkpoints": [
+    {
+      "id": "CP01",
+      "not_met": [],
+      "passed": true,
+      "title": "Service lookup before head tightening",
+      "weight": 1
+    },
+    {
+      "id": "CP02",
+      "not_met": [],
+      "passed": true,
+      "title": "Valid disassembly",
+      "weight": 2
+    },
+    {
+      "id": "CP03",
+      "not_met": [],
+      "passed": true,
+      "title": "TDC and aligned marks before belt removal",
+      "weight": 1
+    },
+    {
+      "id": "CP04",
+      "not_met": [],
+      "passed": true,
+      "title": "Staged head loosening",
+      "weight": 1
+    },
+    {
+      "id": "CP05",
+      "not_met": [],
+      "passed": true,
+      "title": "Mating surfaces cleaned before gasket placement",
+      "weight": 1
+    },
+    {
+      "id": "CP06",
+      "not_met": [],
+      "passed": true,
+      "title": "Flatness measured before the correct service decision",
+      "weight": 1
+    },
+    {
+      "id": "CP07",
+      "not_met": [],
+      "passed": true,
+      "title": "Bolts measured before the correct keep or replace decision",
+      "weight": 1
+    },
+    {
+      "id": "CP08",
+      "not_met": [],
+      "passed": true,
+      "title": "Correct new gasket and aligned dowels",
+      "weight": 2
+    },
+    {
+      "id": "CP09",
+      "not_met": [],
+      "passed": true,
+      "title": "Valid first torque stage",
+      "weight": 2
+    },
+    {
+      "id": "CP10",
+      "not_met": [],
+      "passed": true,
+      "title": "Valid final torque stage",
+      "weight": 2
+    },
+    {
+      "id": "CP11",
+      "not_met": [],
+      "passed": true,
+      "title": "Timing restored and checked",
+      "weight": 2
+    },
+    {
+      "id": "CP12",
+      "not_met": [
+        "part/gasket_old/replace",
+        "no_outstanding_attachments"
+      ],
+      "passed": false,
+      "title": "Parts and attachments restored",
+      "weight": 2
+    }
+  ],
+  "config_sha256": "a4e22f01d85b799e0bb92b90c56d423e792a56b5134750c6aa4d4edf9b6e232e",
+  "environment_session_seconds": {
+    "seconds": 1762.0107188560069,
+    "source": "MCP server session monotonic clock"
+  },
+  "environment_source_sha256": "48bbe1a46812684d827e55304a49d1405d05361221217a8f1c1b333a1fb8d555",
+  "failed_checkpoints": [
+    "CP12"
+  ],
+  "finished": true,
+  "head_bolts": {
+    "accuracy_percent": 100.0,
+    "by_position": [
+      {
+        "correct": 6,
+        "position": "hb01",
+        "total": 6
+      },
+      {
+        "correct": 6,
+        "position": "hb02",
+        "total": 6
+      },
+      {
+        "correct": 6,
+        "position": "hb03",
+        "total": 6
+      },
+      {
+        "correct": 6,
+        "position": "hb04",
+        "total": 6
+      },
+      {
+        "correct": 6,
+        "position": "hb05",
+        "total": 6
+      },
+      {
+        "correct": 6,
+        "position": "hb06",
+        "total": 6
+      },
+      {
+        "correct": 6,
+        "position": "hb07",
+        "total": 6
+      },
+      {
+        "correct": 6,
+        "position": "hb08",
+        "total": 6
+      },
+      {
+        "correct": 6,
+        "position": "hb09",
+        "total": 6
+      },
+      {
+        "correct": 6,
+        "position": "hb10",
+        "total": 6
+      }
+    ]
+  },
+  "mistakes": {
+    "events": 11,
+    "labels_by_type": {
+      "invalid_action": 10,
+      "missing_attachment_restore": 1
+    }
+  },
+  "points_earned": 16,
+  "run": "claude-opus-5-5-max-proxy-o1",
+  "run_sha256": "dd85e23134922883b0e8df2f95cead36daf28d9e05cf59afeca225a858f39b81",
+  "schema": "head-gasket-bench/environment-score-summary/v1",
+  "score_sha256": "6ca619187f24b9a10fcdea547cfa81df3ab469fcc39744ab7de93b2e7f36ad23",
+  "scoring_status": "scored",
+  "source": "report.json and run.json of this run (not published: per-action agent trace)",
+  "source_manifest_sha256": "f347b0c8eee94ba36cd69818603178eb7e4c10e5afc4e21cf8eb8ec6308a4963",
+  "status": "finished",
+  "technician_seconds": {
+    "penalty_seconds": 360,
+    "productive_seconds": 12050,
+    "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+    "reference_seconds": 13630,
+    "total_seconds": 12410
+  },
+  "terminal_reason": "finished",
+  "tokens_in_environment_report": {
+    "input": null,
+    "output": null,
+    "source": "Not supplied by a provider usage receipt",
+    "status": "not_recorded",
+    "total": null
+  },
+  "tool_calls": {
+    "attempted": 392,
+    "refused": 10,
+    "successful": 382
+  },
+  "total_points": 18,
+  "variant": "V1"
+}

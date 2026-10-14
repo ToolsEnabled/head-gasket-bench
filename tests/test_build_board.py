@@ -19,6 +19,9 @@ def fake_record(variant, points, s_full, productive, penalty):
                       'human_time': {'productive_seconds': productive, 'penalty_seconds': penalty}}}
 
 
+OPUS = [f'exploratory/claude-opus-5-5-max-proxy-o{i}' for i in range(1, 6)]
+
+
 class BuildBoardTests(unittest.TestCase):
     def test_committed_board_is_current(self):
         done = subprocess.run([sys.executable, '-B', str(REPO / 'tools' / 'build_board.py'), '--check'],
@@ -33,7 +36,7 @@ class BuildBoardTests(unittest.TestCase):
         self.assertEqual(set(rows), {'reference/V1-amended', 'exploratory/gpt-6.1-sol',
                                      'exploratory/gpt-6-astra', 'exploratory/gpt-6-luna',
                                      'exploratory/claude-haiku-5-5-proxy-r1', 'exploratory/claude-haiku-5-5-proxy-r2',
-                                     'exploratory/claude-haiku-5-5-proxy-r3'})
+                                     'exploratory/claude-haiku-5-5-proxy-r3', *OPUS})
         for r in rows.values():
             self.assertEqual(tuple(r), build_board.FIELDS)
             self.assertTrue(r['exploratory'])
@@ -44,12 +47,18 @@ class BuildBoardTests(unittest.TestCase):
                     'exploratory/gpt-6-astra': (15, 0.416667, 0, 1404, 16190),
                     'exploratory/gpt-6-luna': (13, 0.361111, 0, 14970, 15230),
                     'exploratory/gpt-6.1-sol': (3, 0.083333, 0, 12012, 13280),
-                    'exploratory/claude-haiku-5-5-proxy-r1': (14, 0.388889, 0, 3228, 13952)}
+                    'exploratory/claude-haiku-5-5-proxy-r1': (14, 0.388889, 0, 3228, 13952),
+                    # The five claude-opus-5-5 runs at effort max (each RESULT.md).
+                    'exploratory/claude-opus-5-5-max-proxy-o1': (16, 0.444444, 0, 360, 12050),
+                    'exploratory/claude-opus-5-5-max-proxy-o2': (16, 0.444444, 0, 390, 11690),
+                    'exploratory/claude-opus-5-5-max-proxy-o3': (16, 0.444444, 0, 510, 12750),
+                    'exploratory/claude-opus-5-5-max-proxy-o4': (16, 0.444444, 0, 210, 11600),
+                    'exploratory/claude-opus-5-5-max-proxy-o5': (16, 0.444444, 0, 180, 12100)}
         for name, values in expected.items():
             r = rows[name]
             self.assertEqual((r['points'], r['s_partial'], r['s_full'], r['penalty_s'], r['productive_s']), values)
         self.assertEqual([r['name'] for r in ours],
-                         ['reference/V1-amended', 'exploratory/gpt-6-astra', 'exploratory/claude-haiku-5-5-proxy-r1',
+                         ['reference/V1-amended', *OPUS, 'exploratory/gpt-6-astra', 'exploratory/claude-haiku-5-5-proxy-r1',
                           'exploratory/gpt-6-luna', 'exploratory/claude-haiku-5-5-proxy-r2', 'exploratory/claude-haiku-5-5-proxy-r3',
                           'exploratory/gpt-6.1-sol'])
         # Accepted submissions, if any, are listed as submitted runs.
@@ -62,8 +71,8 @@ class BuildBoardTests(unittest.TestCase):
         self.check_toolsenabled_rows(json.loads(build_board.build(REPO / 'runs')))
 
     def test_an_accepted_submission_does_not_break_the_repository_test(self):
-        # verification of F17 (side note): the push-time tests listed exactly the seven
-        # ToolsEnabled rows, so the first merged submission would have turned them red.
+        # verification of F17 (side note): the push-time tests listed exactly the
+        # ToolsEnabled rows (seven in 0.1.1), so the first merged submission would have turned them red.
         with tempfile.TemporaryDirectory() as tmp:
             runs = Path(tmp) / 'runs'
             for part in ('reference', 'exploratory'):
@@ -96,7 +105,7 @@ class BuildBoardTests(unittest.TestCase):
             rows = json.loads(first)['rows']
             order = [(r['variant'], r['name']) for r in rows]
             self.assertEqual(order, [('V1', 'reference/V1-amended'), ('V1', 'submitted/c-run'),
-                                     ('V1', 'exploratory/gpt-6-astra'), ('V1', 'exploratory/claude-haiku-5-5-proxy-r1'),
+                                     *(('V1', name) for name in OPUS), ('V1', 'exploratory/gpt-6-astra'), ('V1', 'exploratory/claude-haiku-5-5-proxy-r1'),
                                      ('V1', 'exploratory/gpt-6-luna'), ('V1', 'exploratory/claude-haiku-5-5-proxy-r2'),
                                      ('V1', 'exploratory/claude-haiku-5-5-proxy-r3'), ('V1', 'exploratory/gpt-6.1-sol'),
                                      ('V2', 'submitted/a-run'), ('V2', 'submitted/b-run'), ('V3', 'submitted/d-run')])

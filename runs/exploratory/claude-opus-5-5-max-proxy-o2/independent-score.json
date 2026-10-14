@@ -1,0 +1,19 @@
+{
+  "result": {
+    "S_full": 0,
+    "S_partial": 0.4444444444444444,
+    "failed_checkpoints": [
+      "CP12"
+    ],
+    "points_earned": 16,
+    "primary_comparison": "agreement",
+    "shared_fields": {
+      "determined_disagreements": 0,
+      "unknown_in_independent": 0
+    },
+    "total_points": 18
+  },
+  "run": "claude-opus-5-5-max-proxy-o2",
+  "schema": "head-gasket-bench/independent-score-summary/v1",
+  "source": "scorer/hgj_scorer.py score (scorer revision refit-preparation-20261010+cp02-20261014) on this run's run.json, checkpoint revision amendment-2-20261010"
+}
