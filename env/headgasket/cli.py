@@ -23,16 +23,22 @@ import datetime
 import gzip
 import hashlib
 import importlib
+import io
 import json
 import os
 import sys
 from pathlib import Path
 
+try:
+    import fcntl
+except ImportError:  # not POSIX: the folder lock is skipped
+    fcntl = None
+
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-VERSION = '0.1.0'
+VERSION = '0.1.2'
 VARIANTS = ('V1', 'V2', 'V3', 'V4', 'V5')
 SOURCE_MANIFEST = ROOT / 'data' / 'environment-source.json'
 PINS_PATH = ROOT / 'configs' / 'PINS.json'
@@ -41,6 +47,12 @@ MAX_RECORD_BYTES = 64 * 1024 * 1024
 MAX_CONFIG_BYTES = 16 * 1024 * 1024
 RUN_FILES = ('run.json', 'actions.jsonl', 'report.json', 'finish-record.json')
 SUBMISSION_FILES = ('run.json', 'actions.jsonl', 'report.json')
+# What a server start that made no tool call can leave in --out: the files the
+# pinned server writes before or after a session (also when a client kills it,
+# for example after a health check) and their temporary *.tmp copies.
+UNUSED_START_FILES = ('run.json', 'actions.jsonl', 'report.json', 'launch.json',
+                      'run.json.tmp', 'actions.jsonl.tmp', 'report.json.tmp', 'launch.json.tmp')
+SERVE_PYTHON = (3, 12)
 
 
 class Failure(Exception):
@@ -142,27 +154,161 @@ def eprint(*values):
 
 # ----------------------------------------------------------------------------- serve
 
+def interpreter():
+    return sys.implementation.name, tuple(sys.version_info[:3])
+
+
+def require_serving_interpreter():
+    """A record names the interpreter that made it, and only CPython 3.12 records can be
+    replayed by the published tools and submitted: refuse before any model time is spent."""
+    name, version = interpreter()
+    if name != 'cpython' or version[:2] != SERVE_PYTHON:
+        raise Failure(f'serve needs CPython 3.12, and this is {name} {".".join(map(str, version))}. A record made with '
+                      'another interpreter cannot be replayed with the published records or submitted. Start the '
+                      'server with python3.12 (check with python3 --version).')
+
+
+def unused_start(out, entries):
+    """True when --out holds only what a start without any tool call leaves behind."""
+    names = {entry.name for entry in entries}
+    if not names <= set(UNUSED_START_FILES):
+        return False
+    try:
+        if 'actions.jsonl' in names and (out / 'actions.jsonl').stat().st_size != 0:
+            return False
+        for name, count in (('run.json', lambda v: len(v['actions']) if not v['finished'] else None),
+                            ('report.json', lambda v: v['tool_calls']['attempted']),
+                            ('launch.json', lambda v: v['actions'])):
+            if name in names and count(json.loads(read_bounded(out / name, MAX_RECORD_BYTES))) != 0:
+                return False
+    except (Failure, OSError, ValueError, KeyError, TypeError):
+        return False
+    return True
+
+
+def prepare_out(raw):
+    """The --out folder, ready for a new run, and the lock held on it.
+
+    A link is refused. A new folder is created readable only by its owner. An existing
+    folder is used only when it is empty or holds nothing but what a start without any
+    tool call left behind (a client's health check, a listed or restarted server); that
+    is removed first, under the lock, so a folder in use by another server is never touched."""
+    out = Path(os.path.abspath(raw))
+    if out.is_symlink():
+        raise Failure(f'{out}: --out is a symbolic link; name a real folder')
+    created = False
+    if not out.exists():
+        out.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            out.mkdir(mode=0o700)
+            created = True
+        except FileExistsError:
+            pass
+    if out.is_symlink() or not out.is_dir():
+        raise Failure(f'{out}: --out exists and is not a folder')
+    lock = lock_folder(out)
+    try:
+        entries = sorted(out.iterdir())
+        for entry in entries:
+            if entry.is_symlink() or not entry.is_file():
+                raise Failure(f'{out}: holds {entry.name!r}, a link or something other than a regular file; '
+                              'choose a new, empty folder')
+        if entries and unused_start(out, entries):
+            for entry in entries:
+                entry.unlink()
+            eprint(f'headgasket: {out}: removed what an earlier start without any tool call left behind')
+        elif any(entry.name in RUN_FILES for entry in entries):
+            raise Failure(f'{out}: already holds a run; choose a new folder')
+        elif entries:
+            raise Failure(f'{out}: holds other files; choose a new, empty folder')
+    except BaseException:
+        if lock is not None:
+            os.close(lock)
+        raise
+    return out, created, lock
+
+
+def lock_folder(out):
+    """Hold an exclusive lock on --out for the life of this server, so a second start
+    (for example a client health check during a session) cannot reuse the folder."""
+    if fcntl is None:
+        return None
+    handle = os.open(out, os.O_RDONLY)
+    try:
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        os.close(handle)
+        raise Failure(f'{out}: another headgasket server is using this folder; choose a new folder')
+    except OSError:
+        pass  # a file system without locks: serve without one
+    return handle
+
+
+def remove_unused(out, created):
+    """After a session without any tool call: leave nothing behind (the record would have
+    no action to score and would only block the next start)."""
+    entries = sorted(out.iterdir()) if out.is_dir() else []
+    if not all(entry.is_file() and not entry.is_symlink() for entry in entries) or not unused_start(out, entries):
+        return False
+    for entry in entries:
+        entry.unlink()
+    if created:
+        try:
+            out.rmdir()
+        except OSError:
+            pass
+    return True
+
+
+def write_private(path, data):
+    """Write a new file without following a link, readable only by its owner."""
+    handle = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, 'O_NOFOLLOW', 0), 0o600)
+    with os.fdopen(handle, 'wb') as stream:
+        stream.write(data)
+
+
 def cmd_serve(args):
+    require_serving_interpreter()
     pins = load_pins()
     path, pin, variant = resolve_config(args, pins)
     config, config_sha = load_config(path, pin)
-    out = Path(args.out).resolve()
-    if out.exists() and any((out / name).exists() for name in RUN_FILES):
-        raise Failure(f'{out}: already holds a run; choose a new folder')
     runtime = runtime_for(pins)
-    started = utc_now()
-    eprint(f'headgasket {VERSION}: serving {variant} ({config_sha[:12]}) -> {out}')
-    with runtime.active():
-        game = importlib.import_module('hgj.game')
-        mcp = importlib.import_module('hgj.mcp')
-        identity = runtime.identity
-        summary = mcp.serve(game.Game(config, source_runtime=runtime), sys.stdin, sys.stdout, out)
+    out, created, lock = prepare_out(args.out)
+    try:
+        return serve_in(out, created, variant, path, config, config_sha, runtime)
+    finally:
+        if lock is not None:
+            os.close(lock)
+
+
+def serve_in(out, created, variant, path, config, config_sha, runtime):
+    summary = None
+    # Invalid UTF-8 on stdin becomes lone surrogates, which the server answers with a
+    # JSON-RPC error (-32602) instead of stopping, whatever the locale. newline='\n'
+    # keeps the line splitting of sys.stdin.
+    stdin = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8', errors='surrogateescape', newline='\n')
+    try:
+        started = utc_now()
+        eprint(f'headgasket {VERSION}: serving {variant} ({config_sha[:12]}) -> {out}')
+        with runtime.active():
+            game = importlib.import_module('hgj.game')
+            mcp = importlib.import_module('hgj.mcp')
+            identity = runtime.identity
+            summary = mcp.serve(game.Game(config, source_runtime=runtime), stdin, sys.stdout, out)
+    finally:
+        stdin.detach()
+        if summary is None or summary['actions'] == 0:
+            removed = remove_unused(out, created)
+            if summary is not None and removed:
+                eprint(f'headgasket: no tool calls, so no run was recorded and nothing was kept in {out}')
+    if summary['actions'] == 0:
+        return 0
     launch = {'schema': 'headgasket/launch/v1', 'version': VERSION, 'variant': variant,
               'configuration': {'path': str(path.name), 'sha256': config_sha},
               'source_manifest_sha256': identity['source_manifest_sha256'],
               'interpreter': identity['interpreter'], 'started_utc': started, 'ended_utc': utc_now(),
               'actions': summary['actions'], 'finished': summary['finished']}
-    (out / 'launch.json').write_bytes(canonical(launch))
+    write_private(out / 'launch.json', canonical(launch))
     eprint(f'headgasket: {summary["actions"]} actions, finished={summary["finished"]}; record in {out}')
     return 0
 
@@ -334,7 +480,9 @@ def cmd_validate(args):
                 raise Failure(f'{folder}: submission folders need {", ".join(SUBMISSION_FILES)}')
         result = verify_folder(folder, args, pins)
         if not result['finished']:
-            raise Failure(f'{folder}: the run did not finish; only finished runs are ranked')
+            raise Failure(f'{folder}: the run did not finish; `headgasket validate` checks finished runs only. '
+                          'A run that stopped without finish can still be submitted: check it with '
+                          'tools/validate_submission.py from the repository root')
         rows.append(result)
     print(json.dumps({'schema': 'headgasket/validation/v1', 'ok': True, 'cases': rows}, sort_keys=True), flush=True)
     return 0
@@ -422,7 +570,8 @@ def build_parser():
 
     p = sub.add_parser('serve', help='run the MCP stdio server for one variant')
     config_options(p)
-    p.add_argument('--out', required=True, help='new folder for run.json, actions.jsonl, report.json, finish-record.json')
+    p.add_argument('--out', required=True, help='new or empty folder for run.json, actions.jsonl, report.json, '
+                   'finish-record.json and launch.json (a start without any tool call leaves nothing behind)')
     p.set_defaults(func=cmd_serve)
 
     p = sub.add_parser('replay', help='re-derive a run.json and compare it byte for byte')

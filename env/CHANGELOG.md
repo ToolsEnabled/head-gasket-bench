@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.1.2
+
+The runtime closure, the replay-only amended runtime and the V1-V5
+configurations are unchanged (`python3 -m headgasket pins --check`). The
+launcher (`headgasket/cli.py`) changes:
+
+- `serve`: a start that makes no tool call (a client's health check, a listed or
+  restarted server) records nothing and leaves nothing in `--out`; what such a
+  start left behind when it was killed is cleared at the next start; a lock keeps
+  a second server out of a folder in use; a `--out` that is a link, holds links or
+  holds other files is refused; a new folder is created readable only by its
+  owner; `launch.json` is written without following links, `0600`.
+- `serve` refuses an interpreter other than CPython 3.12.
+- `serve` reads its input as UTF-8 with invalid bytes turned into lone
+  surrogates, so the pinned server answers them with a JSON-RPC error instead of
+  stopping.
+- `validate` says that it checks finished runs only and points to the
+  repository validator for a run that stopped without `finish`.
+- `--version`, the start line and `launch.json` say 0.1.2; the MCP `serverInfo`
+  version and `configs/PINS.json` still say 0.1.0 (pinned files).
+
 ## 0.1.0
 
 First public release of the environment. Runtime closure
