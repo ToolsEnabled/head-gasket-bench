@@ -78,8 +78,10 @@ and exits non-zero on any failure. It checks, in order:
 6. **replay**: `python3 -m headgasket replay` (from `env/`) re-applies every
    action and reproduces `run.json` byte for byte.
 7. **scorer**: `scorer/hgj_scorer.py score` accepts the record, agrees with
-   the environment's embedded score on every primary checkpoint and on the
-   shared bolt, mistake and time fields, and agrees with every row of
+   the environment's embedded score on every primary checkpoint and on every
+   shared bolt, mistake and time field it can determine (it reports some
+   checklist items as unknown, for example on parts a run never touched; an
+   unknown is not compared), and agrees with every row of
    `RESULT.md` (points, S_full, S_partial, failed checkpoints, productive and
    penalty seconds, mistake events, tool attempts, finished, the `run.json`
    SHA-256).

@@ -245,10 +245,19 @@ def score(run_path):
     require(assessment['primary_comparison']['status'] == 'agreement', 'scorer',
             'the independent scorer disagrees with the environment score: '
             + json.dumps(assessment['primary_comparison'].get('disagreements'))[:300])
-    require(not assessment['producer_comparison'].get('disagreements'), 'scorer',
+    disagreements = determined_disagreements(assessment['producer_comparison'])
+    require(not disagreements, 'scorer',
             'the independent scorer disagrees on shared bolt, mistake or time fields: '
-            + json.dumps(assessment['producer_comparison'].get('disagreements'))[:300])
+            + json.dumps(disagreements)[:300])
     return assessment
+
+
+def determined_disagreements(comparison):
+    """The shared-field disagreements that count: those where the independent scorer
+    determined a value. It reports some checklist items as unknown (null), for example
+    on parts a run never touched; an unknown is not compared. The primary checkpoints
+    are compared separately and must always agree."""
+    return [row for row in comparison.get('disagreements') or [] if row.get('independent') is not None]
 
 
 def result_fields(assessment, record, run_raw):

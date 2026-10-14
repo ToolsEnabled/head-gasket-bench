@@ -45,6 +45,23 @@ def run(folder):
     return done.returncode, lines
 
 
+class DeterminedDisagreementTests(unittest.TestCase):
+    """An unknown (null) independent value is not a disagreement; a determined one is."""
+
+    def test_unknown_independent_value_is_not_compared(self):
+        comparison = {'disagreements': [
+            {'field': 'surface/cover_face/tube_seals_oiled', 'independent': None, 'producer': False}]}
+        self.assertEqual(validator.determined_disagreements(comparison), [])
+
+    def test_determined_disagreement_still_counts(self):
+        row = {'field': 'human_time/penalty_seconds', 'independent': 30, 'producer': 60}
+        comparison = {'disagreements': [row, {'field': 'x', 'independent': None, 'producer': True}]}
+        self.assertEqual(validator.determined_disagreements(comparison), [row])
+
+    def test_no_disagreements(self):
+        self.assertEqual(validator.determined_disagreements({}), [])
+
+
 class ValidateSubmissionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

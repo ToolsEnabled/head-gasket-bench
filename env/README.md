@@ -254,7 +254,9 @@ Submissions go to the repository root, not to this folder: see
 check it with `python3 tools/validate_submission.py runs/submitted/<name>` and
 open a pull request. `python3 -m headgasket validate <folder>` runs the
 environment's part of those checks (finished run, pinned configuration, exact
-replay) on its own.
+replay) on its own. It refuses a run that did not call `finish`; the
+repository's validator accepts such a run, and it is scored and listed as it
+stands.
 
 Records contain exactly what your client sent as tool arguments. Look at the
 file before you submit it.
