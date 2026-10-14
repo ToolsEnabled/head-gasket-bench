@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.1.2
+
+Fixes from an independent check of 0.1.1; details in `RELEASE-NOTES-0.1.2.md`.
+The pinned runtime, the configurations, the scorer's scoring modules, the
+published records and the paper are unchanged.
+
+- Validator: a finished run without a final timing check, or one that calls
+  `finish` early, is accepted (the independent-only mistake type
+  `missing_timing_verification` is left out of the comparison; primary checkpoints
+  stay strict). `RESULT.md` must equal the generated file; `report.json` must equal
+  the environment's report for the record (only its wall-clock seconds are free);
+  copies of published, withheld or submitted records are refused (`duplicate`);
+  names and dates are matched whole and dates must be real; shown declaration values
+  are plain text; the secret and path scan reads decoded JSON and more formats;
+  `--write-result` refuses a link; plain messages for empty, over-budget and
+  oversized records. Tests: 32 (fresh fixtures instead of a copy of a published
+  record).
+- Pull-request check: `pull_request_target`, so the workflow and every script come
+  from main and the pull request is read as data; triggered by `runs/**` and
+  `leaderboard/**`; the scope check moved to `tools/check_pr_scope.py` (git's
+  NUL-separated output: names with spaces or newlines, links, nested folders,
+  stray files and changes to existing submissions are refused); the board is
+  rebuilt from the pull request's runs with main's `build_board.py`, which refuses
+  links, stray files and odd names under `runs/submitted/`. Tests: 17 scope and
+  workflow tests, 2 board tests.
+- Launcher (`env/headgasket/cli.py`, not pinned): a start without any tool call
+  leaves nothing behind and its leftovers are cleared; a lock keeps a second server
+  out of a folder in use; `serve` refuses an interpreter other than CPython 3.12, a
+  linked `--out` and links in it; invalid UTF-8 input gets a JSON-RPC error;
+  `launch.json` is written without following links, `0600`; version 0.1.2. Tests: 9.
+- Claude Code: `tools/claude-code-proxy.py` passes `look`'s full result to the
+  model; the READMEs show it and how to keep the agent to the 18 job tools.
+- Board: the three 0.1.1 `claude-haiku-5-5` rows (0/18; Claude Code had kept most
+  of `look`'s result from the model) are withdrawn and replaced by three runs
+  through the proxy (14, 12 and 12 of 18).
+- Documentation: refusals are charged penalty time; replay needs the exact CPython
+  version; model-run scores cannot be replayed; counts and runtimes of the
+  exploratory runs; the prompt; refusal hints; bench preparations; stdio clients;
+  privacy statement; the `exploratory` flag; the scorer's `disagreement` line;
+  `look` size and the 64 MB limit; the budget; placeholders; the board rebuild
+  step; `SHA256SUMS`; one security address; the citation URL.
+- Known issues that need a new environment epoch are listed in the release notes.
+
 ## 0.1.1 (2026-10-14)
 
 - Validator: a run that stopped before reassembly can be submitted. The
