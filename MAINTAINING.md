@@ -52,7 +52,7 @@ Every submission is reviewed by hand before it is merged, whatever its score.
    an edited scripted run from a model run; such a near copy is not merged
    unless the submitter shows that a model made it (for example with the
    client's session log, shared privately) and the explanation holds up. The
-   model runs ToolsEnabled made share at most 54% of their calls with any
+   model runs ToolsEnabled made share at most 52% of their calls with any
    scripted record. Repeated runs of one model can share more with each other:
    any two of the five `claude-opus-5-5` runs share 74% to 86% of the shorter
    run's calls, in order, so a second submission of the same model can be marked

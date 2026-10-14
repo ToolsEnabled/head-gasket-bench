@@ -67,7 +67,7 @@ scored results only, in [runs/exploratory](runs/exploratory/README.md)):
 | Claude Code, effort max | claude-opus-5-5 | 5 | 16, 16, 16, 16, 16 | 0% | CP12 in each |
 | Claude Code | claude-haiku-5-5 | 3 | 14, 12, 12 | 0% | CP02 and CP12 in each, CP11 in two |
 
-No agent has completed the job correctly. The best agent result so far is 16 of
+No agent has completed the job correctly. The highest agent score so far is 16 of
 18 points, by `claude-opus-5-5` at effort max, in 5 of 5 finished runs; the
 scripted correct job scores 18 of 18. All five lost CP12 (reassembly complete) in
 the same way: the agent removed the old head gasket and fitted the new one from

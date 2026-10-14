@@ -87,7 +87,7 @@ environment, 14 under the old scorer).
   record with one call added) passes, but its `PASS` line ends with
   `REVIEW BY HAND`, and every `RESULT.md` states how many calls the run shares
   with the closest scripted record. ToolsEnabled cannot tell an edited scripted
-  run from a model run (the model runs it made share at most 54% of their calls
+  run from a model run (the model runs it made share at most 52% of their calls
   with a scripted record); every submission, whatever its score, is reviewed by
   hand before it is merged (`MAINTAINING.md`). Repeated runs of one model can
   share most of their calls: any two of the five `claude-opus-5-5` runs share 282
@@ -203,8 +203,8 @@ environment, 14 under the old scorer).
   validator before its journal was withheld; scored results only, as for the other
   exploratory runs.
 - **Five `claude-opus-5-5` runs at effort max are listed**, with the same harness
-  (`--effort max`): all five finished with 16 of 18 points (Success 0), the best
-  agent result so far, and each failed only CP12 (reassembly complete), in the
+  (`--effort max`): all five finished with 16 of 18 points (Success 0), the highest
+  agent score so far, and each failed only CP12 (reassembly complete), in the
   same way. The agent removed the old head gasket and fitted the new gasket from
   supply with `install`, instead of exchanging the old gasket for it with
   `replace`; the environment then counted the gasket's service position as not

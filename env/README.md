@@ -344,8 +344,8 @@ what the numbers mean.
 ## Model runs so far
 
 The scored results of the model runs ToolsEnabled made are in
-`../runs/exploratory/`. No agent has completed the job correctly. The best result
-so far is 16 of 18 points, by `claude-opus-5-5` at effort max through Claude Code,
+`../runs/exploratory/`. No agent has completed the job correctly. The highest agent
+score so far is 16 of 18 points, by `claude-opus-5-5` at effort max through Claude Code,
 in 5 of 5 finished runs. Each of the five failed only CP12 (reassembly complete),
 in the same way: the agent removed the old head gasket (`remove`) and fitted the
 new gasket from supply with `install`, instead of exchanging the old gasket for it

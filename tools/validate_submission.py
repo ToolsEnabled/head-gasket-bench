@@ -417,7 +417,7 @@ def closest(mine, known):
 def near_copy(mine, match):
     """True when most calls of one record are, in order, the calls of the other: at
     least NEAR_COPY_SHARE of the shorter record and at least NEAR_COPY_MIN_CALLS calls.
-    The model runs ToolsEnabled made share at most 54% with any scripted record; a
+    The model runs ToolsEnabled made share at most 52% with any scripted record; a
     scripted record with a call added, dropped or changed shares nearly 100%."""
     if match is None:
         return False

@@ -119,7 +119,7 @@ and exits non-zero on any failure. It checks, in order:
    near copy: it still passes, but the `PASS` line ends with
    `REVIEW BY HAND: ...`, and the maintainer does not merge it unless the
    submitter shows that a model made it. The model runs ToolsEnabled made share at
-   most 54% of their calls with any scripted record.
+   most 52% of their calls with any scripted record.
 6. **pins**: the configuration is one of the five pinned configurations in
    `env/configs/PINS.json` and matches the declared variant; the record was
    made with the current environment runtime and with CPython 3.12.
