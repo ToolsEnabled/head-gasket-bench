@@ -214,13 +214,18 @@ the five files are published in this repository under its MIT licence.
 
 Known issues of this environment epoch, which need new pinned code to fix (see
 the release notes): a record of more than 1,024 attempts cannot be scored (`serve`
-0.1.2 stops recording at 1,024); and on a run that makes a refused
-`prepare_condition` or `release_attachment` attempt during disassembly, the
-environment and the independent scorer can decide CP02 differently, and the
-validator then refuses the run, because primary checkpoints must agree. The
-second is common: all five finished `claude-opus-5-5` runs ToolsEnabled made for
-release 0.1.2 hit it (16 of 18 in the environment, 14 under the independent
-scorer), so none of them could be submitted. A run without such refused attempts
-is not affected.
+0.1.2 stops recording at 1,024); and a `remove` call whose `route_id` is not one of
+the part's routes makes the pinned environment fail every call from then on (the
+record keeps the calls before it, and can be submitted as a run that stopped
+early).
+
+The independent scorer of 0.1.0 and 0.1.1 failed CP02 on every refused
+`remove`, `prepare_condition` or `release_attachment` attempt, where the
+environment counts only a refused removal of a part that was still blocked or
+still attached (the paper's definition), so the validator refused a run on
+which the two disagreed.
+Release 0.1.2 revises the scorer to decide CP02 as the environment does
+(`scorer/PROVENANCE.md`); a run that the old validator refused for CP02 alone can
+now be submitted.
 
 ToolsEnabled is not affiliated with or endorsed by Anthropic, OpenAI or any other AI provider.

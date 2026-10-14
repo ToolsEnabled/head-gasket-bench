@@ -1,13 +1,68 @@
 # Head Gasket Bench 0.1.2
 
 Patch release. It fixes what an independent check of 0.1.1 found in the
-submission path, the pull-request check and the launcher, corrects the
-documentation, and replaces the 0.1.1 baseline. The repository settings the
-check relies on are in `MAINTAINING.md`. The pinned environment runtime
-(`env/hgj/`, `env/tools/source_server.py`, the amended epoch), the five
-configurations, the scorer's scoring modules, the published records and the
-paper are unchanged, so every published record replays and scores exactly as
-before (`python3 -m headgasket pins --check` and the scorer's `SHA256SUMS`).
+submission path, the pull-request check and the launcher, makes the independent
+scorer decide CP02 as the paper defines it and the environment decides it,
+corrects the documentation, replaces the 0.1.1 baseline and adds five
+`claude-opus-5-5` runs to the board. The repository settings the check relies on
+are in `MAINTAINING.md`. The pinned environment runtime (`env/hgj/`,
+`env/tools/source_server.py`, the amended epoch), the five configurations, the
+published records and the paper are unchanged, so every published record replays
+exactly as before (`python3 -m headgasket pins --check`). Two of the scorer's
+twelve scoring modules change (below); every published record gets the same
+points, checkpoints and comparison as before (the scorer's `SHA256SUMS` lists the
+new files).
+
+## The scorer: CP02 as the paper defines it
+
+The paper defines CP02 (Appendix C): "Disassembly followed the documented
+removal policy. Any refused removal attempt of a part that was still blocked or
+still attached fails CP02, and is also counted as a mistake." The environment
+counts a refused `remove` only when the part it names is installed and the
+removal policy still blocks it (`BLOCKED_BY_BENCHMARK_RULE`), takes it off only
+with its assembly (`REMOVE_WITH_ASSEMBLY`) or keeps it for the job
+(`RETAINED_FOR_JOB`), or when the part is a scored fastener (a head or cover
+bolt) whose route is open, so that the refusal means it is still threaded or
+another installed part is still in its way. The scorer of 0.1.0 and 0.1.1 failed
+CP02 on every refused `remove`, `prepare_condition` and `release_attachment`
+attempt, so a run with a refused preparation or release attempt, or a removal
+refused because the part was already off, could pass CP02 in the environment and
+fail it in the scorer, and the validator, which requires every primary checkpoint
+to agree, refused it.
+All five finished `claude-opus-5-5` runs below hit this (16 of 18 in the
+environment, 14 under the old scorer).
+
+- **Scorer revision `refit-preparation-20261010+cp02-20261014`.**
+  `job_accuracy/removal.py` decides, from its own replay of the removal policy,
+  which refused removals the environment's rule counts, and only those and
+  executed invalid transitions fail CP02; `job_accuracy/checkpoints.py` reads
+  CP02's refused removals from that list. Like the environment, the scorer reads
+  a refused call's part as the call named it, so a refusal that names a part by
+  its stock label is not counted. The checkpoint definitions, weights and rule
+  revisions (`amendment-2-20261010` by default) and the other ten modules are
+  unchanged. `scorer/PROVENANCE.md` now says that ten modules, not twelve, are
+  the sealed files, names the two revised ones with their old and new SHA-256
+  (also in `scorer/PINS.json`), and `score` and `compare` print the revision.
+- **Rescored.** Every record ToolsEnabled holds was scored with the old and the
+  new modules: the 13 family records and the reference (identical assessments),
+  the three GPT records and the three `claude-haiku-5-5` baseline records (the
+  same points, checkpoints, comparison and shared fields; only CP02's evidence
+  list is shorter, without refused preparation and release attempts and removals
+  of unknown part names), and 13 unpublished model runs. Points change only for
+  the five `claude-opus-5-5` runs, 14 to 16, now in agreement with the
+  environment. On
+  every record the refused calls the new scorer counts are exactly those in the
+  environment's CP02 evidence. No published result changes.
+- **Tests.** `tests/test_cp02_agreement.py` replays the scripted V1 record
+  through the pinned environment with refused calls added and checks, call by
+  call, that the environment and the scorer count the same refusals: a refused
+  `prepare_condition` or `release_attachment`, and a `remove` refused for a part
+  already removed, an unknown part, a stock part or a stock label, count in
+  neither; a `remove` of a part still blocked, of a part that comes off only with
+  its assembly, of a part kept for the job, of a threaded head bolt, of the
+  valve cover on threaded bolts, and of a refitted bolt still engaged count in
+  both. The old scorer fails this test (it counts 11 refusals the environment
+  does not). The scorer's 167 tests pass unchanged.
 
 ## Submissions
 
@@ -34,7 +89,11 @@ before (`python3 -m headgasket pins --check` and the scorer's `SHA256SUMS`).
   with the closest scripted record. ToolsEnabled cannot tell an edited scripted
   run from a model run (the model runs it made share at most 54% of their calls
   with a scripted record); every submission, whatever its score, is reviewed by
-  hand before it is merged (`MAINTAINING.md`).
+  hand before it is merged (`MAINTAINING.md`). Repeated runs of one model can
+  share most of their calls: any two of the five `claude-opus-5-5` runs share 282
+  to 325 calls, in order (74% to 86% of the shorter run; three of the ten pairs
+  reach the 80% mark), so a second submission of the same model may be marked for
+  review; the mark asks for a look, not a refusal.
 - **`RESULT.md` shows the same seconds and mistake events as the record and the
   board.** It showed the independent scorer's figures, which leave some values
   unknown (`penalty seconds | None` for a run that calls `finish` early) and count
@@ -138,21 +197,39 @@ before (`python3 -m headgasket pins --check` and the scorer's `SHA256SUMS`).
 - **The three 0.1.1 `claude-haiku-5-5` rows (0/18 each) are withdrawn.** They
   measured that client limit, not the model. Three runs before them, with the
   client's default limit, were never listed for the same reason.
-- **Seven `claude-opus-5-5` runs (Claude Code, effort max) are not listed.** Two
-  ran before the proxy existed and hit the same client limit (1 and 0 of 18; the
-  second was stopped). Five ran through the proxy and finished with 16 of 18 points
-  in the environment (CP12, reassembly, failed in each: the old gasket was not
-  exchanged with `replace`) and 14 of 18 under the independent scorer, which
-  also fails CP02 on their refused preparation attempts (the CP02 known issue
-  below), so the validator refuses all five. No run scored 18/18.
 - **The new baseline**: three runs of `claude-haiku-5-5` through Claude Code with
   the proxy (headless, only the 18 job tools, the task prompt in `env/README.md`)
   finished with 14, 12 and 12 of 18 points (Success 0). Each record passed the
   validator before its journal was withheld; scored results only, as for the other
   exploratory runs.
+- **Five `claude-opus-5-5` runs at effort max are listed**, with the same harness
+  (`--effort max`): all five finished with 16 of 18 points (Success 0), the best
+  agent result so far, and each failed only CP12 (reassembly complete), in the
+  same way. The agent removed the old head gasket and fitted the new gasket from
+  supply with `install`, instead of exchanging the old gasket for it with
+  `replace`; the environment then counted the gasket's service position as not
+  refitted and refused every `restore_attachment` ("selected service positions
+  are not installed"), so none of the 100 attachments the agent had released was
+  restored by `finish`, and a late `replace` was refused because the new gasket
+  was already installed. The runs made 371 to 393 tool calls, and the client
+  reported an API-equivalent cost of $8.44 to $10.28 per run ($45.94 for the
+  five). Each record passed the validator with the revised scorer before its
+  journal was withheld; under the 0.1.1 scorer they scored 14 and could not be
+  submitted (see The scorer, above). No agent has completed the job correctly;
+  the scripted correct job scores 18/18.
+- **Three other `claude-opus-5-5` runs are not listed.** Two ran before the proxy
+  existed and hit the same client limit: Claude Code saved `look`'s result to a
+  file and showed the model a 2 KB preview (1 of 18 after 181 calls, and 0 of 18
+  when ToolsEnabled stopped the second after 84). A sixth run through the proxy
+  was stopped by ToolsEnabled before it finished and left no record.
 
 | Agent | Model | Points / 18 | Failed checkpoints | Tool calls (refused) | Finished |
 |---|---|---:|---|---:|---|
+| Claude Code, effort max | claude-opus-5-5 (run 1) | 16 | CP12 | 392 (10) | yes |
+| Claude Code, effort max | claude-opus-5-5 (run 2) | 16 | CP12 | 378 (10) | yes |
+| Claude Code, effort max | claude-opus-5-5 (run 3) | 16 | CP12 | 393 (16) | yes |
+| Claude Code, effort max | claude-opus-5-5 (run 4) | 16 | CP12 | 371 (6) | yes |
+| Claude Code, effort max | claude-opus-5-5 (run 5) | 16 | CP12 | 383 (5) | yes |
 | Claude Code | claude-haiku-5-5 (run 1) | 14 | CP02, CP12 | 516 (83) | yes |
 | Claude Code | claude-haiku-5-5 (run 2) | 12 | CP02, CP11, CP12 | 530 (81) | yes |
 | Claude Code | claude-haiku-5-5 (run 3) | 12 | CP02, CP11, CP12 | 498 (107) | yes |
@@ -164,8 +241,8 @@ Single runs describe behaviour; they are not estimates of model performance.
 Corrected: a refused attempt is charged its base seconds as penalty (it is not
 free); replay needs the exact CPython version that made a record (3.12.3 for the
 published ones); the model runs' scores cannot be replayed from this repository
-(their journals are withheld); counts (six exploratory model runs, seven board
-rows, 14 cited service entries); which runs used which runtime; what the prompt
+(their journals are withheld); counts (eleven exploratory model runs, twelve
+board rows, 14 cited service entries); which runs used which runtime; what the prompt
 was used for; what refusals say; the bench preparations the agent records with
 `prepare_condition`; that the server needs a stdio MCP client; what `report.json`
 and the privacy statement say about tool arguments; the `exploratory` flag; the
@@ -195,15 +272,14 @@ needs new pins and new runs.
   the server (see The launcher); a record made with the 0.1.1 launcher, or with
   the pinned server started some other way, can still exceed the budget and
   cannot be scored or submitted.
-- **CP02 on refused preparation or release attempts.** On a run that makes a
-  refused `prepare_condition` or `release_attachment` attempt during disassembly,
-  the independent scorer counts it as a blocked removal attempt and fails CP02,
-  while the environment can pass CP02. The validator keeps primary checkpoints
-  strict, so it refuses such a run and the run cannot be submitted or listed.
-  This is not rare: all five finished `claude-opus-5-5` runs
-  ToolsEnabled made for this release hit it (16 of 18 in the environment, 14 under
-  the independent scorer). 0.1.1 required the primary checkpoints to agree too,
-  so this is not a regression.
+- **A `remove` naming a route the part does not have stops the run.** For an
+  installed part that comes off on its own, a `remove` whose `route_id` is not
+  one of the part's routes is refused, but the pinned environment then fails
+  while it scores CP02 (`unknown requested route`), and the server answers that
+  call and every later one with a JSON-RPC error (`Invalid request`). The saved
+  record keeps the calls made before it and can be scored and submitted as a run
+  that stopped early. Found while testing the CP02 revision; leave `route_id`
+  out, or name a route that `inspect` lists for the part.
 - **The scorer's printed comparison status** says `disagreement` whenever the two
   checklists' item sets differ, which they always do.
 - **Each `look` result is stored twice** (in `run.json` and `actions.jsonl`), so

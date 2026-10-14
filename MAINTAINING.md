@@ -53,7 +53,11 @@ Every submission is reviewed by hand before it is merged, whatever its score.
    unless the submitter shows that a model made it (for example with the
    client's session log, shared privately) and the explanation holds up. The
    model runs ToolsEnabled made share at most 54% of their calls with any
-   scripted record.
+   scripted record. Repeated runs of one model can share more with each other:
+   any two of the five `claude-opus-5-5` runs share 74% to 86% of the shorter
+   run's calls, in order, so a second submission of the same model can be marked
+   as a near copy of the first. That mark asks for a look at the session logs;
+   on its own it is not a reason to refuse.
 3. Read `RESULT.md`: its row `calls in common with a scripted record` gives the
    same count against the closest published scripted record, for every
    submission.

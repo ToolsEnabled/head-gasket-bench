@@ -28,7 +28,7 @@ and asks it to repair one.
 |---|---|---|
 | [`env/`](env/) | The environment: an MCP stdio server with 18 tools, five variants (V1-V5), replay and verify. Python 3.12 standard library only, no network | MIT |
 | [`scorer/`](scorer/) | The independent checkpoint scorer: re-derives the twelve checkpoints from a saved record without trusting the environment's score | MIT |
-| [`runs/`](runs/) | The published records: the 13-case scripted family, the scripted V1 reference, and the scored results of six exploratory model runs: the paper's three GPT runs and a three-run `claude-haiku-5-5` baseline ([RECORDS.md](runs/RECORDS.md)) | MIT (data) |
+| [`runs/`](runs/) | The published records: the 13-case scripted family, the scripted V1 reference, and the scored results of eleven exploratory model runs: the paper's three GPT runs, a three-run `claude-haiku-5-5` baseline and five `claude-opus-5-5` runs ([RECORDS.md](runs/RECORDS.md)) | MIT (data) |
 | [`paper/`](paper/) | The report: `paper.pdf` (64 pages), `paper.docx`, `paper.txt`, figures, the claim-to-data ledger | CC BY 4.0 |
 | [`leaderboard/`](leaderboard/) | `board.json`, built from `runs/` by `tools/build_board.py` | MIT |
 | [`tools/`](tools/) | `validate_submission.py`, `build_board.py`, `check_pr_scope.py` (the pull-request scope check), `claude-code-proxy.py`, `make_release.sh` | MIT |
@@ -46,20 +46,6 @@ plus the scripted reference (from the paper's Table 1):
 | Codex CLI | GPT-6-Luna | 13 | 36.1% | 0% | 15,230 + 14,970 | 309 |
 | Codex CLI | GPT-6.1-Sol | 3 | 8.3% | 0% | 13,280 + 12,012 | 245 |
 
-A low-cost baseline: three runs of `claude-haiku-5-5` through Claude Code
-(headless, only the 18 job tools, the server started through
-`tools/claude-code-proxy.py`) finished with 14, 12 and 12 of 18 points
-([runs/exploratory](runs/exploratory/README.md)). Release 0.1.1 had listed three
-0/18 runs instead, and three runs before those were never listed. In all six,
-Claude Code had kept most of `look`'s result from the model, so they measured the
-client rather than the model: the three 0.1.1 rows are withdrawn, and none of the
-six is on the board. Seven `claude-opus-5-5` runs ToolsEnabled made before release
-0.1.2 are not on the board either: two hit the same client limit (1 and 0 of 18),
-and five through the proxy finished with 16 of 18 points in the environment and 14
-under the independent scorer, which the validator refuses (the CP02 known issue in
-[RELEASE-NOTES-0.1.2.md](RELEASE-NOTES-0.1.2.md)). No run of an AI agent by
-ToolsEnabled has scored 18/18.
-
 In the paper's own words: "Table 1 reports one exploratory run per model on the
 standard job (V1), with the scripted reference for comparison. No run achieved
 full completion." "With one run per model, these figures describe individual
@@ -69,6 +55,36 @@ not attested."), model-call counts and API-equivalent cost were not available,
 and technician seconds are analyst estimates, not measured labour. The agent
 traces of these runs (their per-action journals) are not published; their
 folders carry the scored results only.
+
+Runs ToolsEnabled made for release 0.1.2, outside the paper, through Claude Code
+(headless, with its own tools turned off so that the agent had only the 18 job
+tools, the server started through `tools/claude-code-proxy.py`,
+`MAX_MCP_OUTPUT_TOKENS=150000`, the task prompt in [env/README.md](env/README.md);
+scored results only, in [runs/exploratory](runs/exploratory/README.md)):
+
+| Agent | Model | Runs | Points / 18, each run | Success (S_full) | Failed checkpoints |
+|---|---|---:|---|---:|---|
+| Claude Code, effort max | claude-opus-5-5 | 5 | 16, 16, 16, 16, 16 | 0% | CP12 in each |
+| Claude Code | claude-haiku-5-5 | 3 | 14, 12, 12 | 0% | CP02 and CP12 in each, CP11 in two |
+
+No agent has completed the job correctly. The best agent result so far is 16 of
+18 points, by `claude-opus-5-5` at effort max, in 5 of 5 finished runs; the
+scripted correct job scores 18 of 18. All five lost CP12 (reassembly complete) in
+the same way: the agent removed the old head gasket and fitted the new one from
+supply with `install`, instead of exchanging the old gasket for it with
+`replace`. The environment then counts the old gasket's service position as
+never refitted and refuses `restore_attachment` ("selected service positions are
+not installed"), so none of the 100 attachments the agent had released was
+restored, and a late `replace` was refused because the new gasket was already in
+place. The client reported an API-equivalent cost of $8.44 to $10.28 per run.
+These runs describe behaviour; they are not estimates of model performance.
+
+Not on the board: release 0.1.1 listed three 0/18 `claude-haiku-5-5` runs, and
+three runs before those were never listed. In all six, Claude Code had kept most
+of `look`'s result from the model, so they measured the client rather than the
+model; the same happened to two early `claude-opus-5-5` runs (1 and 0 of 18). A
+sixth `claude-opus-5-5` run through the proxy was stopped by ToolsEnabled before
+it finished and left no record.
 
 ## Quick start
 
@@ -226,8 +242,8 @@ and open a pull request that adds `runs/submitted/<name>/` and the rebuilt
 [`leaderboard/board.json`](leaderboard/board.json) lists one row per run, as
 recorded: model label, client, variant, points, S_partial, S_full, penalty and
 productive seconds, date and source. Rows are sorted by variant, then
-S_partial. The seven rows there today are runs by ToolsEnabled (the scripted
-reference and six model runs) and are marked `exploratory`; they describe
+S_partial. The twelve rows there today are runs by ToolsEnabled (the scripted
+reference and eleven model runs) and are marked `exploratory`; they describe
 behaviour and do not rank models. Submitted rows
 appear when a pull request passes validation, a maintainer has reviewed it by
 hand and it is merged ([MAINTAINING.md](MAINTAINING.md)). ToolsEnabled checks

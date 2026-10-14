@@ -2,10 +2,30 @@
 
 ## 0.1.2
 
-Fixes from an independent check of 0.1.1; details in `RELEASE-NOTES-0.1.2.md`.
-The pinned runtime, the configurations, the scorer's scoring modules, the
-published records and the paper are unchanged.
+Fixes from an independent check of 0.1.1, a scorer revision for CP02 and five
+new board rows; details in `RELEASE-NOTES-0.1.2.md`. The pinned runtime, the
+configurations, the published records and the paper are unchanged; two of the
+scorer's twelve scoring modules are revised, and no published result changes.
 
+- Scorer: revision `refit-preparation-20261010+cp02-20261014`. CP02 now counts
+  refused attempts as the paper defines it (Appendix C) and as the environment
+  decides it: a refused `remove` fails CP02 when the part is installed and the
+  removal policy still blocks it, takes it off only with its assembly or keeps it
+  for the job, or when it is a scored fastener whose route is open; a refused
+  `prepare_condition` or `release_attachment`, or a `remove` refused for any other
+  reason (a part already off, an unknown part, a stock label), no longer does.
+  Before, the scorer failed CP02 on every refused `remove`,
+  `prepare_condition` and `release_attachment` attempt while the environment did
+  not, and the validator refused such a run. `job_accuracy/removal.py` and
+  `job_accuracy/checkpoints.py` change (old and new SHA-256 in
+  `scorer/PROVENANCE.md` and `scorer/PINS.json`); the checkpoint definitions
+  (revision `amendment-2-20261010`) and the other ten modules are unchanged;
+  `score` and `compare` print the revision. Every record ToolsEnabled holds was
+  rescored with the old and the new modules: no published result changes, and the
+  refused calls the new scorer counts equal the environment's CP02 evidence on
+  every record. Tests: `tests/test_cp02_agreement.py` (records made by replaying
+  the scripted V1 record through the pinned environment with refused calls
+  added).
 - Validator: a finished run without a final timing check, or one that calls
   `finish` early, is accepted (the independent-only mistake type
   `missing_timing_verification` is left out of the comparison; primary checkpoints
@@ -49,9 +69,12 @@ published records and the paper are unchanged.
   model; the READMEs show it and how to keep the agent to the 18 job tools.
 - Board: the three 0.1.1 `claude-haiku-5-5` rows (0/18; Claude Code had kept most
   of `look`'s result from the model) are withdrawn and replaced by three runs
-  through the proxy (14, 12 and 12 of 18). Seven `claude-opus-5-5` runs are not
-  listed (two hit the client limit; five, 16/18 in the environment and 14/18 under
-  the independent scorer, are refused by the validator: the CP02 known issue).
+  through the proxy (14, 12 and 12 of 18). Five `claude-opus-5-5` runs (Claude
+  Code, effort max, the same harness) are added: 16 of 18 each, CP12 failed in
+  each (the new head gasket fitted with `install` instead of exchanged with
+  `replace`, so no attachment could be restored). Two earlier `claude-opus-5-5`
+  runs that hit the client limit, and one that ToolsEnabled stopped before it
+  finished (no record), are not listed. Twelve rows in all.
 - Documentation: refusals are charged penalty time; replay needs the exact CPython
   version; model-run scores cannot be replayed; counts and runtimes of the
   exploratory runs; the prompt; refusal hints; bench preparations; stdio clients;

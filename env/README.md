@@ -319,10 +319,10 @@ runtime (`data/environment-source.json`, hardened epoch `aecadda`) serves new
 runs and replays the scripted family. The earlier amended runtime (epoch
 `24a5713`, `epochs/amended-v5/`, pinned in `configs/PINS.json` under `epochs`)
 is replay-only: it made the published V1 reference run and the three GPT
-exploratory runs of the paper (the `claude-haiku-5-5` baseline runs used the
-current runtime). It differs from the current runtime in four modules
-(`api`, `benchmark_geometry`, `game`, `mcp`: the compact finish reply and the
-refusal wording); both use the same five configurations.
+exploratory runs of the paper (the `claude-haiku-5-5` and `claude-opus-5-5`
+runs of release 0.1.2 used the current runtime). It differs from the current
+runtime in four modules (`api`, `benchmark_geometry`, `game`, `mcp`: the compact
+finish reply and the refusal wording); both use the same five configurations.
 
 A record replays exactly only under the CPython version that made it (the
 interpreter version is part of the recorded source identity). The published
@@ -340,6 +340,19 @@ seven faulty jobs, each served through the real stdio server. The correct
 routes score 18/18; the faults lose the checkpoints they are built to lose. See
 `../runs/RECORDS.md` for the table and hashes. No model was involved; these show
 what the numbers mean.
+
+## Model runs so far
+
+The scored results of the model runs ToolsEnabled made are in
+`../runs/exploratory/`. No agent has completed the job correctly. The best result
+so far is 16 of 18 points, by `claude-opus-5-5` at effort max through Claude Code,
+in 5 of 5 finished runs. Each of the five failed only CP12 (reassembly complete),
+in the same way: the agent removed the old head gasket (`remove`) and fitted the
+new gasket from supply with `install`, instead of exchanging the old gasket for it
+with `replace`. The environment then counts the old gasket's service position as
+not refitted, so `restore_attachment` is refused ("selected service positions are
+not installed") and the released attachments stay released; a later `replace` is
+refused because the new gasket is already installed.
 
 ## Submit a run
 

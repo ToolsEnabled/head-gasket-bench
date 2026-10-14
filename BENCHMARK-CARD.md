@@ -53,10 +53,17 @@ they describe behaviour and do not rank the models. Served identity, model-call
 Steps and API-equivalent price remain unavailable; recorded token counters and agent
 wall intervals are retained. GPT-6-Luna's counters cover the observed prefix only; its
 final-turn coverage and wall time are unavailable. The larger comparison remains
-pending. Release 0.1.2 adds a low-cost baseline outside the paper: three runs of
-claude-haiku-5-5 through Claude Code with only the 18 job tools, on the current
-(hardened) runtime, which finished with 14, 12 and 12 of 18 points (Success 0); they
-too describe behaviour only.
+pending. Release 0.1.2 adds runs outside the paper, all through Claude Code with
+only the 18 job tools, on the current (hardened) runtime: a low-cost baseline of
+three claude-haiku-5-5 runs, which finished with 14, 12 and 12 of 18 points, and
+five claude-opus-5-5 runs at effort max, which each finished with 16 of 18 points
+and failed only the reassembly checkpoint (CP12: the new head gasket was fitted
+with install instead of exchanged for the old one with replace, so no released
+attachment could be restored). Success is 0 in all eight; no agent has completed
+the job correctly, while the scripted correct job scores 18 of 18. They too
+describe behaviour only. The same release revises the independent scorer so that
+CP02 counts refused attempts as the paper defines it and the environment decides
+it; no published result changed.
 
 ## Collection process
 
