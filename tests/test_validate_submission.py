@@ -149,6 +149,41 @@ class DeterminedDisagreementTests(unittest.TestCase):
             self.assertIn(f"'{kind}'", scorer_source)
 
 
+class SharedCallsTests(unittest.TestCase):
+    """shared_calls is the longest common subsequence of two call lists."""
+
+    @staticmethod
+    def longest_common_subsequence(a, b):
+        previous = [0] * (len(b) + 1)
+        for x in a:
+            current = [0]
+            for j, y in enumerate(b):
+                current.append(previous[j] + 1 if x == y else max(previous[j + 1], current[j]))
+            previous = current
+        return previous[-1]
+
+    def test_matches_the_textbook_algorithm(self):
+        import random
+        rng = random.Random(20261014)
+        for _ in range(2000):
+            a = [rng.choice('abcde') for _ in range(rng.randint(0, 25))]
+            b = [rng.choice('abcdef') for _ in range(rng.randint(0, 25))]
+            self.assertEqual(validator.shared_calls(a, b), self.longest_common_subsequence(a, b), (a, b))
+
+    def test_near_copies_of_a_scripted_record_are_found_and_model_runs_are_not(self):
+        scripted = [f'call-{i}' for i in range(436)]
+        for mine in (['extra'] + scripted, scripted[:300], scripted + ['x'] * 600, scripted[:200] + ['y'] + scripted[201:]):
+            match = ('runs/family/V1-wrong_timing', validator.shared_calls(mine, scripted), len(scripted))
+            self.assertTrue(validator.near_copy(mine, match))
+        # About half of the calls in common, the most any model run ToolsEnabled made reached.
+        half = scripted[::2] + [f'model-{i}' for i in range(200)]
+        self.assertFalse(validator.near_copy(half, ('x', validator.shared_calls(half, scripted), len(scripted))))
+        # A short run is not flagged for a few common opening calls.
+        short = scripted[:5]
+        self.assertFalse(validator.near_copy(short, ('x', validator.shared_calls(short, scripted), len(scripted))))
+        self.assertFalse(validator.near_copy(short, None))
+
+
 class DeclarationAndScanTests(unittest.TestCase):
     def declaration(self, **changes):
         return json.dumps({**DECLARATION, **changes}).encode()
@@ -172,6 +207,24 @@ class DeclarationAndScanTests(unittest.TestCase):
         self.assertIn('\n', validator.check_declaration(self.declaration(notes='line one\nline two'))['notes'])
         self.assert_refused(self.declaration(notes='hidden ‮ text'))
 
+    def test_every_bidirectional_and_invisible_character_is_refused(self):
+        # verification of F13: U+061C ARABIC LETTER MARK (the last Bidi_Control character the
+        # old list missed) and invisible format and separator characters passed.
+        hidden = ('\u061c', '\u200b', '\u200c', '\u200d', '\u2060', '\ufeff', '\u2028', '\u2029', '\u00ad',
+                  '\u200e', '\u202a', '\u2066', '\U000e0041', '\ue000', '\x85')
+        for char in hidden:
+            for key in ('model_label', 'client', 'submitter'):
+                with self.subTest(char=hex(ord(char)), key=key):
+                    self.assert_refused(self.declaration(**{key: 'a' + char + 'b'}))
+            with self.subTest(char=hex(ord(char)), key='notes'):
+                self.assert_refused(self.declaration(notes='a' + char + 'b'))
+        with self.assertRaises(validator.Fail) as caught:
+            validator.check_declaration(self.declaration(client='a\u061cb'))
+        self.assertIn('U+061C', str(caught.exception))
+        plain = self.declaration(model_label='Modèle X — 2.1 (ß, 東京)', client='Claude Code 2.1, --tools ""',
+                                 submitter='Zoë O\'Brien', notes='tabs\tand\r\nline breaks are fine here')
+        self.assertEqual(validator.check_declaration(plain)['submitter'], 'Zoë O\'Brien')
+
     def scan(self, name, raw):
         files = {'SUBMISSION.json': self.declaration(), 'report.json': b'{}', name: raw}
         try:
@@ -182,7 +235,7 @@ class DeclarationAndScanTests(unittest.TestCase):
         return None
 
     def test_escaped_values_in_json_are_scanned(self):
-        # / is "/" and - is "-": the raw bytes hold neither a path nor a key prefix.
+        # \u002f is "/" and \u002d is "-": the raw bytes hold neither a path nor a key prefix.
         escaped = b'{"submitter": "alice (\\u002fhome\\u002falice)"}'
         self.assertIn('SUBMISSION.json (decoded)', self.scan('SUBMISSION.json', escaped))
         key = b'{"notes": "key sk\\u002dant\\u002dapi03\\u002d' + b'A' * 30 + b'"}'
@@ -259,8 +312,13 @@ class ValidateSubmissionTests(unittest.TestCase):
         self.assertTrue(lines[0].startswith(f'FAIL {folder}: {check}:'), lines)
         self.assertIn(text, lines[0])
 
+    def result_rows(self, folder):
+        return validator.parse_result((folder / 'RESULT.md').read_bytes())
+
     def test_a_fresh_unfinished_run_passes(self):
         self.assert_passes(self.short, 'V1 0/18 S_partial 0.000000; files, declaration, secrets, chain, duplicate')
+        code, lines = run(self.short)
+        self.assertNotIn('REVIEW', lines[0])
 
     def test_a_finished_run_without_the_final_timing_check_passes(self):
         # redteam F1: the independent scorer's extra mistake type used to refuse this run.
@@ -269,6 +327,52 @@ class ValidateSubmissionTests(unittest.TestCase):
         failed = [row['id'] for row in record['score']['primary_score']['checkpoints'] if not row['passed']]
         self.assertEqual(failed, ['CP11'])
         self.assert_passes(self.no_final_timing, 'V1 16/18 S_partial 0.444444')
+
+    def test_a_near_copy_of_a_scripted_record_is_marked_for_review(self):
+        # verification of F3: the published V1-correct calls without one call scored 16/18
+        # and passed with nothing to tell the maintainer that it is a scripted run.
+        code, lines = run(self.no_final_timing)
+        self.assertEqual(code, 0, lines)
+        self.assertIn('REVIEW BY HAND: 435 of its 435 calls are, in order, calls of runs/family/V1-correct', lines[0])
+        self.assertEqual(self.result_rows(self.no_final_timing)['calls in common with a scripted record'],
+                         '435 of 435, in order (runs/family/V1-correct, 436 calls)')
+
+    def test_a_near_copy_of_another_submission_is_marked_for_review(self):
+        root = Path(self.tmp.name) / 'near-submission'
+        queries = [['search_service_info', {'query': f'head bolt torque step {i}'}] for i in range(24)]
+        (root / 'first.json').parent.mkdir(parents=True)
+        (root / 'first.json').write_text(json.dumps(queries))
+        (root / 'second.json').write_text(json.dumps(queries + [['parts_bin', {}]]))
+        first, second = root / '2026-10-14-model-a-v1', root / '2026-10-14-model-b-v1'
+        for folder, calls in ((first, 'first.json'), (second, 'second.json')):
+            helper('make', str(folder), str(root / calls))
+            submission(folder)
+        code, lines = run(first)
+        self.assertEqual(code, 0, lines)
+        self.assertIn('REVIEW BY HAND: 24 of its 24 calls are, in order, calls of runs/submitted/2026-10-14-model-b-v1',
+                      lines[0])
+        code, lines = run(second)
+        self.assertEqual(code, 0, lines)
+        self.assertIn('REVIEW BY HAND: 24 of its 25 calls are, in order, calls of runs/submitted/2026-10-14-model-a-v1',
+                      lines[0])
+
+    def test_result_md_shows_the_record_s_seconds_and_mistakes_like_the_board(self):
+        # verification of F1 (caveat 1): RESULT.md showed the independent scorer's unknown
+        # penalty (None) and its extra mistake event, while run.json and the board said otherwise.
+        sys.path.insert(0, str(REPO / 'tools'))
+        import build_board
+        for folder in (self.finish_only, self.no_final_timing, self.short):
+            record = json.loads((folder / 'run.json').read_bytes())
+            rows = self.result_rows(folder)
+            human = record['score']['human_time']
+            self.assertEqual(rows['penalty seconds'], str(human['penalty_seconds']), folder.name)
+            self.assertEqual(rows['productive seconds'], str(human['productive_seconds']), folder.name)
+            self.assertEqual(rows['mistake events'], str(record['score']['mistakes']['count']), folder.name)
+            self.assertNotIn('None', rows['penalty seconds'])
+            board_row = build_board.row('x', 'm', 'c', 'V1', *build_board.from_score(record['score']), 'd', 's', False)
+            self.assertEqual(rows['penalty seconds'], str(board_row['penalty_s']))
+            self.assertEqual(rows['productive seconds'], str(board_row['productive_s']))
+        self.assertEqual(self.result_rows(self.no_final_timing)['mistake events'], '0')
 
     def test_a_run_that_calls_finish_early_passes(self):
         self.assert_passes(self.finish_only, 'V1 0/18 S_partial 0.000000')

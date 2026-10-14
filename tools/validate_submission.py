@@ -20,7 +20,9 @@ Checks, in order; the first failure ends the run:
              report.json exactly the envelope the environment writes for this
              record (only its wall-clock seconds are free)
   duplicate  the tool calls are not those of a published scripted record, of a
-             withheld ToolsEnabled record or of another submission
+             withheld ToolsEnabled record or of another submission; a near copy
+             (most calls, in order, those of one of them) passes with a request
+             for a maintainer's review
   pins       configuration is one of env/'s pinned V1-V5 configurations and the
              runtime is env/'s current source manifest; same CPython version
   replay     python3 -m headgasket replay (from env/) reproduces run.json exactly
@@ -29,7 +31,8 @@ Checks, in order; the first failure ends the run:
              shared field both scorers determine; RESULT.md is exactly the file
              --write-result generates
 
-Prints one line (PASS or FAIL with the check name) and exits 0 only on PASS.
+Prints one line (PASS or FAIL with the check name) and exits 0 only on PASS. A PASS
+line that ends with "REVIEW BY HAND" marks a near copy for the maintainer.
 Standard library only; nothing here reads the network.
 """
 import argparse
@@ -41,6 +44,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import unicodedata
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -56,17 +60,25 @@ VARIANTS = ('V1', 'V2', 'V3', 'V4', 'V5')
 # Used with fullmatch: '$' would also accept a trailing newline, and \d any Unicode digit.
 NAME_RE = re.compile(r'[a-z0-9][a-z0-9._-]{2,99}')
 DATE_RE = re.compile(r'[0-9]{4}-[0-9]{2}-[0-9]{2}')
-# Declaration values are shown in RESULT.md and on the board: no control or
-# bidirectional-override characters, and no backticks (they would end RESULT.md's
-# code spans). notes is shown nowhere and may hold line breaks and tabs.
-SHOWN_FORBIDDEN = re.compile('[\x00-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069`]')
-NOTES_FORBIDDEN = re.compile('[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]')
+# Declaration values are shown in RESULT.md and on the board, so they must be plain,
+# visible text: no character of these Unicode categories (control; format, which holds
+# every bidirectional mark, override and isolate including U+061C, and the zero-width
+# and byte-order marks; surrogate; private use; unassigned; line and paragraph
+# separator), and no backticks (they would end RESULT.md's code spans). notes is shown
+# nowhere and may also hold tabs and line breaks.
+HIDDEN_CATEGORIES = frozenset({'Cc', 'Cf', 'Cs', 'Co', 'Cn', 'Zl', 'Zp'})
+NOTES_ALLOWED = frozenset('\t\n\r')
 TOP_KEYS = {'actions', 'budget', 'config', 'config_sha256', 'environment_source', 'environment_source_sha256',
             'final_state', 'final_state_sha256', 'finished', 'initial_state', 'initial_state_sha256', 'schema',
             'score', 'score_sha256', 'scoring_status'}
 ACTION_KEYS = {'human_time_charge', 'input', 'name', 'post_state_sha256', 'pre_state_sha256',
                'previous_action_sha256', 'result', 'seq'}
 MAX_ACTIONS = 1024
+# A record that shares at least this share of the shorter record's calls, in order, with
+# a scripted record or another submission (and at least NEAR_COPY_MIN_CALLS calls) is
+# marked for a maintainer's review.
+NEAR_COPY_SHARE = 0.8
+NEAR_COPY_MIN_CALLS = 20
 SCORER_REVISION = 'amendment-2-20261010'
 # The independent scorer labels a finished run that has no final timing check of
 # enough revolutions 'missing_timing_verification'; the environment has no such
@@ -176,14 +188,27 @@ def check_declaration(raw):
         value = declaration[key]
         require(isinstance(value, str) and value.strip() and len(value) <= (2000 if key == 'notes' else 200),
                 'declaration', f'SUBMISSION.json {key} must be a non-empty string (at most 200 characters, notes 2000)')
-        forbidden = (NOTES_FORBIDDEN if key == 'notes' else SHOWN_FORBIDDEN).search(value)
-        if forbidden:
-            raise Fail('declaration', f'SUBMISSION.json {key} contains {forbidden.group(0)!r}; use plain text (no control '
-                       'or bidirectional-override characters' + ('' if key == 'notes' else ', no backticks') + ')')
+        forbidden = hidden_character(value, shown=key != 'notes')
+        if forbidden is not None:
+            raise Fail('declaration', f'SUBMISSION.json {key} contains U+{ord(forbidden):04X}; use plain text (no control, '
+                       'bidirectional, zero-width or other invisible characters'
+                       + ('' if key == 'notes' else ', no line breaks and no backticks') + ')')
     require(declaration['variant'] in VARIANTS, 'declaration', 'variant must be one of ' + ', '.join(VARIANTS))
     require(DATE_RE.fullmatch(declaration['date']) is not None and real_date(declaration['date']), 'declaration',
             'date must be a real date written YYYY-MM-DD')
     return declaration
+
+
+def hidden_character(value, shown):
+    """The first character a declaration value may not hold, or None."""
+    for char in value:
+        if shown and char == '`':
+            return char
+        if not shown and char in NOTES_ALLOWED:
+            continue
+        if unicodedata.category(char) in HIDDEN_CATEGORIES:
+            return char
+    return None
 
 
 def real_date(text):
@@ -259,9 +284,10 @@ def check_attempt_count(actions):
             '(a client that only connected to the server made no run)')
     require(len(actions) <= MAX_ACTIONS, 'chain',
             f'the record holds {len(actions)} tool-call attempts, more than the {MAX_ACTIONS:,}-attempt budget. '
-            'The environment keeps recording calls made after turns_remaining reached 0, but the pinned independent '
-            f'scorer accepts at most {MAX_ACTIONS:,} attempts, so this run cannot be scored or submitted '
-            '(a known issue of this environment epoch; see SUBMISSIONS.md)')
+            'The pinned environment records a call made after turns_remaining reached 0 (the launcher of release 0.1.2 '
+            f'and later answers such a call without recording it), and the pinned independent scorer accepts at most '
+            f'{MAX_ACTIONS:,} attempts, so this run cannot be scored or submitted (a known issue of this environment '
+            'epoch; see SUBMISSIONS.md)')
 
 
 def report_reasons(record):
@@ -317,9 +343,9 @@ def check_report(report, record, raw):
 
 # ---------------------------------------------------------------- duplicates
 
-def call_fingerprint(actions):
-    """The tool calls a record made, in order: names and inputs only."""
-    return digest([[row.get('name'), row.get('input')] for row in actions])
+def call_keys(actions):
+    """The tool calls a record made, in order, one digest per call (name and input only)."""
+    return [digest([row.get('name'), row.get('input')]) if isinstance(row, dict) else None for row in actions]
 
 
 def journal_calls(path):
@@ -332,18 +358,35 @@ def journal_calls(path):
         return None
 
 
-def check_duplicate(folder, record, files):
-    """Refuse a copy: the same tool calls as a published scripted record or another
-    submission, or the bytes of a withheld ToolsEnabled record. A run that changes a
-    single call is not a copy; ToolsEnabled cannot tell a scripted run from a model run."""
-    mine = call_fingerprint(record['actions'])
+def shared_calls(mine, theirs):
+    """How many calls two records have in common in the same order: the length of the
+    longest common subsequence of the two call lists (bit-parallel, Crochemore et al.
+    2001; one big-integer step per call, so a 1,024-call pair takes milliseconds)."""
+    masks = {}
+    for index, call in enumerate(theirs):
+        masks[call] = masks.get(call, 0) | (1 << index)
+    full = (1 << len(theirs)) - 1
+    row = full
+    for call in mine:
+        match = row & masks.get(call, 0)
+        row = ((row + match) | (row - match)) & full
+    return len(theirs) - bin(row).count('1')
+
+
+def scripted_records():
+    """(label, actions.jsonl) of the published scripted records, runs/family and runs/reference."""
     known = []
     for kind in ('family', 'reference'):
         base = REPO / 'runs' / kind
         if base.is_dir():
-            known += [(f'the published record runs/{kind}/{case.name}', case / 'actions.jsonl')
+            known += [(f'runs/{kind}/{case.name}', case / 'actions.jsonl')
                       for case in sorted(base.iterdir()) if case.is_dir() and not case.is_symlink()]
-    roots = []
+    return known
+
+
+def other_submissions(folder):
+    """(label, actions.jsonl) of the other submissions, on main and beside this folder."""
+    roots, known = [], []
     for root in (REPO / 'runs' / 'submitted', Path(folder).parent):
         if root.is_dir() and root.resolve() not in [r.resolve() for r in roots]:
             roots.append(root)
@@ -352,11 +395,60 @@ def check_duplicate(folder, record, files):
         for other in sorted(root.iterdir()):
             if other.name == Path(folder).name or other.is_symlink() or not other.is_dir() or other.resolve() == here:
                 continue
-            known.append((f'the submission runs/submitted/{other.name}', other / 'actions.jsonl'))
+            known.append((f'runs/submitted/{other.name}', other / 'actions.jsonl'))
+    return known
+
+
+def closest(mine, known):
+    """The known record with the most calls in common with mine, in order:
+    (label, shared calls, its number of calls), or None."""
+    best = None
     for label, path in known:
         calls = journal_calls(path)
-        if calls is not None and all(isinstance(row, dict) for row in calls) and call_fingerprint(calls) == mine:
-            raise Fail('duplicate', f'the record makes the same tool calls as {label}; a submission must be a new run')
+        if not calls or not all(isinstance(row, dict) for row in calls):
+            continue
+        theirs = call_keys(calls)
+        shared = shared_calls(mine, theirs)
+        if best is None or shared > best[1]:
+            best = (label, shared, len(theirs))
+    return best
+
+
+def near_copy(mine, match):
+    """True when most calls of one record are, in order, the calls of the other: at
+    least NEAR_COPY_SHARE of the shorter record and at least NEAR_COPY_MIN_CALLS calls.
+    The model runs ToolsEnabled made share at most 54% with any scripted record; a
+    scripted record with a call added, dropped or changed shares nearly 100%."""
+    if match is None:
+        return False
+    _label, shared, theirs = match
+    return shared >= NEAR_COPY_MIN_CALLS and shared >= NEAR_COPY_SHARE * min(len(mine), theirs)
+
+
+def describe_match(mine, match):
+    if match is None:
+        return 'none'
+    label, shared, theirs = match
+    return f'{shared} of {len(mine)}, in order ({label}, {theirs} calls)'
+
+
+def check_duplicate(folder, record, files):
+    """Refuse a copy (the same tool calls as a published scripted record or another
+    submission, or the bytes of a withheld ToolsEnabled record) and find near copies.
+
+    Returns (closest scripted record, review note or None). A record whose calls are
+    mostly, in order, those of a scripted record or another submission is not refused
+    (a model can repeat much of a correct procedure, and ToolsEnabled cannot tell a
+    model run from an edited scripted run), but the PASS line asks for a maintainer's
+    review, and RESULT.md states how many calls the run shares with the closest
+    scripted record."""
+    mine = call_keys(record['actions'])
+    scripted, submitted = scripted_records(), other_submissions(folder)
+    for label, path in scripted + submitted:
+        calls = journal_calls(path)
+        if calls is not None and all(isinstance(row, dict) for row in calls) and call_keys(calls) == mine:
+            kind = 'the submission' if label.startswith('runs/submitted/') else 'the published record'
+            raise Fail('duplicate', f'the record makes the same tool calls as {kind} {label}; a submission must be a new run')
     hashes = {sha(files['run.json']), sha(files['actions.jsonl'])}
     exploratory = REPO / 'runs' / 'exploratory'
     for provenance in sorted(exploratory.glob('*/provenance.json')) if exploratory.is_dir() else []:
@@ -368,6 +460,14 @@ def check_duplicate(folder, record, files):
         withheld = {item.get('sha256') if isinstance(item, dict) else item for item in listed}
         require(not hashes & withheld, 'duplicate',
                 f'the record is the withheld record of runs/exploratory/{provenance.parent.name}')
+    nearest = closest(mine, scripted)
+    review = None
+    for match in (nearest, closest(mine, submitted)):
+        if near_copy(mine, match):
+            review = (f'REVIEW BY HAND: {match[1]} of its {len(mine)} calls are, in order, calls of {match[0]} '
+                      f'({match[2]} calls), so it may be an edited copy; check that a model made it')
+            break
+    return nearest, review
 
 
 def check_pins(record, declaration):
@@ -449,20 +549,29 @@ def determined_disagreements(comparison):
     return rows
 
 
-def result_fields(assessment, record, run_raw):
+def result_fields(assessment, record, run_raw, nearest):
+    """RESULT.md's rows. Points and checkpoints come from the independent scorer (the
+    validator has checked that they equal the environment's). Technician seconds and
+    mistake events are the environment's figures from the record, the same numbers the
+    board shows: the independent scorer leaves some of them unknown (for example the
+    penalty of a run that calls finish early) and has a mistake type the environment
+    does not (missing_timing_verification), and the validator has checked that the two
+    agree wherever both determine a value."""
     primary = assessment['primary_score']
     failed = [row['id'] for row in primary['checkpoints'] if not row['passed']]
     calls = assessment['tool_calls']
+    human, mistakes = record['score']['human_time'], record['score']['mistakes']
     return [
         ('points', f'{primary["points_earned"]}/{primary["total_points"]}'),
         ('S_full', str(primary['S_full'])),
         ('S_partial', f'{primary["S_partial"]:.6f}'),
         ('failed checkpoints', ', '.join(failed) or 'none'),
-        ('productive seconds', str(assessment['human_time']['productive_seconds'])),
-        ('penalty seconds', str(assessment['human_time']['penalty_seconds'])),
-        ('mistake events', str(assessment['mistakes']['count'])),
+        ('productive seconds', str(human['productive_seconds'])),
+        ('penalty seconds', str(human['penalty_seconds'])),
+        ('mistake events', str(mistakes['count'])),
         ('tool attempts', f'{calls["attempted"]} ({calls["refused"]} refused)'),
         ('finished', 'yes' if record['finished'] else 'no'),
+        ('calls in common with a scripted record', describe_match(call_keys(record['actions']), nearest)),
         ('checkpoint revision', SCORER_REVISION),
         ('run.json sha256', sha(run_raw)),
     ]
@@ -476,8 +585,12 @@ def render_result(name, declaration, fields):
              '`python3 tools/validate_submission.py --write-result`. Do not edit by hand.', '',
              '| Field | Value |', '|---|---|']
     lines += [f'| {key} | {value} |' for key, value in fields]
-    lines += ['', 'Technician seconds are analyst estimates, not measured labour. ToolsEnabled verifies that the record '
-              'replays exactly and scores the same under the independent scorer; it does not verify which model served the run.', '']
+    lines += ['', 'Points and checkpoints are the same under the environment and the independent scorer. Technician '
+              'seconds and mistake events are the environment\'s figures from the record, as on the board; the independent '
+              'scorer agrees wherever it determines them. Technician seconds are analyst estimates, not measured labour. '
+              'The calls in common are counted in order against the closest published scripted record (`runs/family/`, '
+              '`runs/reference/`). ToolsEnabled verifies that the record replays exactly and scores the same under the '
+              'independent scorer; it does not verify which model served the run.', '']
     return '\n'.join(lines)
 
 
@@ -494,7 +607,7 @@ def check_result(raw, fields):
     stated = parse_result(raw)
     for key, value in fields:
         require(key in stated, 'scorer', f'RESULT.md has no "{key}" row (regenerate it with --write-result)')
-        require(stated[key] == value, 'scorer', f'RESULT.md says {key} = {stated[key]}; the scorer finds {value}')
+        require(stated[key] == value, 'scorer', f'RESULT.md says {key} = {stated[key]}; the validator finds {value}')
 
 
 def validate(folder):
@@ -502,18 +615,19 @@ def validate(folder):
     declaration = check_declaration(files['SUBMISSION.json'])
     check_secrets(files)
     record = check_chain(files)
-    check_duplicate(folder, record, files)
+    nearest, review = check_duplicate(folder, record, files)
     variant = check_pins(record, declaration)
     check_replay((folder / 'run.json').resolve())
     assessment = score((folder / 'run.json').resolve())
-    fields = result_fields(assessment, record, files['run.json'])
+    fields = result_fields(assessment, record, files['run.json'], nearest)
     check_result(files['RESULT.md'], fields)
     generated = render_result(folder.name, declaration, fields).encode('utf-8')
     require(files['RESULT.md'].replace(b'\r\n', b'\n') == generated, 'scorer',
             'RESULT.md is not exactly the file --write-result generates (regenerate it; do not edit it)')
     values = dict(fields)
     return (f'{variant} {values["points"]} S_partial {values["S_partial"]}; '
-            'files, declaration, secrets, chain, duplicate, pins, replay and scorer checks passed')
+            'files, declaration, secrets, chain, duplicate, pins, replay and scorer checks passed'
+            + (f'; {review}' if review else ''))
 
 
 def write_result(folder):
@@ -529,7 +643,8 @@ def write_result(folder):
     record = json.loads(run_raw)
     check_attempt_count(record.get('actions') if isinstance(record, dict) else None)
     assessment = score((folder / 'run.json').resolve())
-    text = render_result(folder.name, declaration, result_fields(assessment, record, run_raw))
+    nearest = closest(call_keys(record['actions']), scripted_records())
+    text = render_result(folder.name, declaration, result_fields(assessment, record, run_raw, nearest))
     target.write_bytes(text.encode('utf-8'))
     return text
 
