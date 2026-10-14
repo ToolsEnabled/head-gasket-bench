@@ -1,0 +1,49 @@
+{
+  "copied_unchanged": true,
+  "qualification": "Retained local development software procedures; not sealed current MCP runtime or study collection",
+  "records": [
+    {
+      "bytes": 734802,
+      "control": "correct",
+      "file": "correct.json",
+      "sha256": "3c9f888feafb9108241b6169daff50ab03d511481956ff0327a29635cf2194ce"
+    },
+    {
+      "bytes": 773444,
+      "control": "wrong_torque_sequence",
+      "file": "wrong_torque_sequence.json",
+      "sha256": "8d51f092edb12567fc5d0002b271105e415502f1b6574fbf6dd1c88bd0aaac9f"
+    },
+    {
+      "bytes": 755230,
+      "control": "under_torque",
+      "file": "under_torque.json",
+      "sha256": "fa4b2af88ccdf94613ad5360185af2658f833315581d49598103466f7a8bd8f0"
+    },
+    {
+      "bytes": 703070,
+      "control": "skipped_final_stage",
+      "file": "skipped_final_stage.json",
+      "sha256": "084012cdccd05cc11667ce55990ce9caefd62aef41442b6e35d6b88aebc528fc"
+    },
+    {
+      "bytes": 737052,
+      "control": "wrong_gasket",
+      "file": "wrong_gasket.json",
+      "sha256": "d4dc5b0b1864a8af20efe7ae2f32872f90c64b9ecc0e1a5c656c18b5db645a3e"
+    },
+    {
+      "bytes": 733585,
+      "control": "reused_stretched_bolt",
+      "file": "reused_stretched_bolt.json",
+      "sha256": "6db494b736516bfe2a24d65532f28bffbb45656712421da5995981cdc0d4f46c"
+    },
+    {
+      "bytes": 736736,
+      "control": "wrong_timing",
+      "file": "wrong_timing.json",
+      "sha256": "07dac7c37d5cd0ea11a33337f0cdb4d09f66b62a11ceb7fed196a654c494edc5"
+    }
+  ],
+  "schema": "hgj/independent-input-set/v1"
+}

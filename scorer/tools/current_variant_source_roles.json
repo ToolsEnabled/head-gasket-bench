@@ -1,0 +1,41 @@
+{
+  "bootstrap": "tools/source_server.py",
+  "runtime_modules": {
+    "hgj": "hgj/__init__.py",
+    "hgj.action_conditions": "hgj/action_conditions.py",
+    "hgj.action_domains": "hgj/action_domains.py",
+    "hgj.api": "hgj/api.py",
+    "hgj.backends": "hgj/backends.py",
+    "hgj.benchmark_geometry": "hgj/benchmark_geometry.py",
+    "hgj.checkpoints": "hgj/checkpoints.py",
+    "hgj.codec": "hgj/codec.py",
+    "hgj.exact_imports": "hgj/exact_imports.py",
+    "hgj.game": "hgj/game.py",
+    "hgj.geometry": "hgj/geometry.py",
+    "hgj.human_time": "hgj/human_time.py",
+    "hgj.initial_conditions": "hgj/initial_conditions.py",
+    "hgj.mcp": "hgj/mcp.py",
+    "hgj.procedure_actions": "hgj/procedure_actions.py",
+    "hgj.removal_policy": "hgj/removal_policy.py",
+    "hgj.repair_report": "hgj/repair_report.py",
+    "hgj.repair_scoring": "hgj/repair_scoring.py"
+  },
+  "schema": "hgj/current-scripted-source-roles/v1",
+  "scope": "Original signed v4 scripted family; successor closures require a separate version",
+  "source_expectations_sha256": "c2b405118a2ff4e7de8dda65c6c417946cb1112db05d4d5a5868ba3ca35f7eaa",
+  "source_receipt_sha256": "9e136f71140c2d11e680f4a0215feb9d89d3a02c200d6c9e547a1b648e264edb",
+  "supporting_files": [
+    "data/human-time-policy-v3.json",
+    "data/labor-v2.json",
+    "data/procedure-retained-bodies.json",
+    "data/service.json",
+    "hgj/fixtures.py",
+    "tools/freeze_environment_source.py",
+    "tools/l1_controls.py",
+    "tools/prepare_variant.py",
+    "tools/repair_controls.py",
+    "tools/repair_demo.py",
+    "tools/variant_controls.py",
+    "tools/variant_demo.py"
+  ]
+}
