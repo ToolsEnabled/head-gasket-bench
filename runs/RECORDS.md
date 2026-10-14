@@ -1,8 +1,8 @@
 # Head Gasket Job benchmark: run records
 
-This tree holds the public run records of the head-gasket replacement benchmark on a real 1990s 1.6 L SOHC inline-four engine: the sealed scripted family of the hardened environment epoch (13 cases), the three exploratory model runs, and the scripted reference the paper's Table 1 uses. Every record is a deterministic, hash-chained action journal that the environment runtime can replay bit for bit. The agent traces of the three model runs (their per-action journals) are not published: their folders carry the scored results only (`exploratory/README.md`). How to submit a run: `../SUBMISSIONS.md`.
+This tree holds the public run records of the head-gasket replacement benchmark on a real 1990s 1.6 L SOHC inline-four engine: the sealed scripted family of the hardened environment epoch (13 cases), the scripted reference the paper's Table 1 uses, and the scored results of six exploratory model runs: the paper's three GPT runs and a three-run `claude-haiku-5-5` baseline added in 0.1.2. Every published record is a deterministic, hash-chained action journal that the environment runtime can replay bit for bit under the CPython version that made it. The agent traces of the model runs (their per-action journals) are not published: their folders carry the scored results only (`exploratory/README.md`). How to submit a run: `../SUBMISSIONS.md`.
 
-**The three model runs are single exploratory runs, one per requested model, on the standard job only. They describe behaviour and do not rank the models.** No run completed the repair fully correctly (Success 0 for all three). There are no repeats, no intervals, no other variants, and the serving system did not attest the model identity. This is what the paper says, and it is the only reading these records support.
+**The paper's three model runs are single exploratory runs, one per requested model, on the standard job only. They describe behaviour and do not rank the models.** No run completed the repair fully correctly (Success 0 for all three). There are no repeats, no intervals, no other variants, and the serving system did not attest the model identity. This is what the paper says, and it is the only reading these records support. The `claude-haiku-5-5` baseline adds three repeats of one model on the same job, also with Success 0; it describes behaviour too.
 
 ## 1. Layout
 
@@ -13,7 +13,7 @@ runs/
   configurations/                 V1..V5 configurations (public pins) and the two source manifests
   family/<case>/                  13 sealed scripted cases, hardened runtime aecadda
     run.json actions.jsonl report.json RESULT.md provenance.json
-  exploratory/<model>/            3 exploratory model runs, amended runtime 24a5713, variant V1: scored results only
+  exploratory/<model>/            the paper's 3 GPT exploratory runs, amended runtime 24a5713, variant V1: scored results only
   exploratory/claude-haiku-5-5-proxy-r*/ 3 low-cost baseline runs (2026-10-14), hardened runtime, variant V1: scored results only
     RESULT.md environment-score.json independent-score.json provenance.json
   reference/V1-amended/           the scripted 18/18 V1 reference of the amended epoch (13,630 s)
@@ -58,16 +58,17 @@ python3 -m headgasket replay --record ../runs/reference/V1-amended/run.json
 | Set | Runtime commit | Source manifest | Configuration (public pin) | Checkpoint revision | Independent scorer |
 |---|---|---|---|---|---|
 | `family/` (13 cases) | `aecadda60f795293c18d24d04ac91fe66b0a2278` (hardened v6) | `f347b0c8eee94ba36cd69818603178eb7e4c10e5afc4e21cf8eb8ec6308a4963` | V1 `a4e22f01d85b799e…`, V2 `bf1726c9fa62f97d…`, V3 `a210cc8d19ffbe4b…`, V4 `797d52ba162e5c52…`, V5 `f7783d4e19f3cf9d…` (full pins in `configurations/CONFIGURATIONS.md`) | configuration label `amendment-1-20261009`; scored under Amendment 2 (`amendment-2-20261010`) | family comparison at scorer commit `ed6a96291ad135db77940cd51389fdd6516dd0a8` (base epoch `064d14af4f1f9819b76ae0ab4a9cff01efcf6983`), result `4d203f6a232ba91a3842f3432bf65d1a0b257109966059b65708493d0ae6c56a`: all 13 primary outcomes, shared fields and 5,582 charges agree |
-| `exploratory/` (3 runs) | `24a57135fc5d86e70e668880d8119556a40a9611` (amended v5, Amendment 2) | `10967be0011b7c7808a47a108e74b1076f5141b10a5d5a7d39fa4d4087e8179b` | V1 `a4e22f01d85b799e0bb92b90c56d423e792a56b5134750c6aa4d4edf9b6e232e` | configuration label `amendment-1-20261009`; scored under Amendment 2 | scorer epoch `064d14af4f1f9819b76ae0ab4a9cff01efcf6983` (`refit-preparation-20261010`): primary agreement on every checkpoint for all three; see each `RESULT.md` |
+| `exploratory/gpt-*` (3 runs) | `24a57135fc5d86e70e668880d8119556a40a9611` (amended v5, Amendment 2) | `10967be0011b7c7808a47a108e74b1076f5141b10a5d5a7d39fa4d4087e8179b` | V1 `a4e22f01d85b799e0bb92b90c56d423e792a56b5134750c6aa4d4edf9b6e232e` | configuration label `amendment-1-20261009`; scored under Amendment 2 | scorer epoch `064d14af4f1f9819b76ae0ab4a9cff01efcf6983` (`refit-preparation-20261010`): primary agreement on every checkpoint for all three; see each `RESULT.md` |
+| `exploratory/claude-haiku-5-5-proxy-r*` (3 runs, 2026-10-14) | `aecadda60f795293c18d24d04ac91fe66b0a2278` (hardened v6) | `f347b0c8eee94ba36cd69818603178eb7e4c10e5afc4e21cf8eb8ec6308a4963` | V1 `a4e22f01d85b799e0bb92b90c56d423e792a56b5134750c6aa4d4edf9b6e232e` | configuration label `amendment-1-20261009`; scored under Amendment 2 | this repository's `scorer/` (`refit-preparation-20261010`): primary agreement and no determined shared-field disagreement for all three; see each `RESULT.md` |
 | `reference/V1-amended/` | `24a57135fc5d86e70e668880d8119556a40a9611` | `10967be0011b7c7808a47a108e74b1076f5141b10a5d5a7d39fa4d4087e8179b` | V1 `a4e22f01d85b799e0bb92b90c56d423e792a56b5134750c6aa4d4edf9b6e232e` | as above | accepted within the amended family, result `c4f5fe3d7e180c21217602bca42182fd38954391026f83e53ae38e11d1b973ef` |
 
-The hardened runtime differs from the amended runtime in two things only: a successful `finish` returns a compact summary (at most 956 bytes) with a hashed reference to the full finish record, and refusal messages name the submitted identifier and the failed predicate without stating the correct answer. Checkpoint rules, durations, mistake assessments, part identities and removal predicates are unchanged, and the five configurations are byte-identical between the two epochs. No model run has used the hardened epoch.
+The hardened runtime differs from the amended runtime in two things only: a successful `finish` returns a compact summary (at most 956 bytes) with a hashed reference to the full finish record, and refusal messages name the submitted identifier and the failed predicate without stating the correct answer. Checkpoint rules, durations, mistake assessments, part identities and removal predicates are unchanged, and the five configurations are byte-identical between the two epochs. The paper's three GPT runs used the amended runtime; no model run in the paper used the hardened epoch. The three `claude-haiku-5-5` baseline runs of 0.1.2 used the hardened runtime.
 
 Amendment 1 (2026-10-09T23:15Z): CP04 accepts either documented loosening order (the manual diagram 10, 9, 8, 7, 6, 3, 4, 5, 2, 1 or exact reverse 10 to 1); CP12 keeps a new head gasket mandatory and allows the valve-cover gasket to be new or the original inspected and refitted with sealant. Amendment 2 (2026-10-10T00:45Z): one complete documented loosening sequence used consistently across all passes. Both predate every model run.
 
 ## 5. Provenance: sealed records and the public form
 
-Each public record was derived from a sealed record kept in the publisher's private evidence packets. The sealed packets were verified before export (every outer inventory `sha256sum -c` OK; the 13 family records equal in the packet's outer copy and its archive; the three exploratory journals equal the inputs the independent scorer sealed).
+Each public record was derived from a sealed record kept in the publisher's private evidence packets. The sealed packets were verified before export (every outer inventory `sha256sum -c` OK; the 13 family records equal in the packet's outer copy and its archive; the three GPT exploratory journals equal the inputs the independent scorer sealed).
 
 The sealed records embed strings that this public tree must not carry: two internal shared-folder spellings of benchmark policy documents (cited 625 times per record inside the configuration's reassembly requirements), and the digests of a printed service manual's locator and of two private citation records (one of which is cited by every action's labour charge). Because those strings sit inside the hash-chained configuration and inside every action, they cannot be edited in place without breaking replay. The public records were therefore **re-derived**: the sealed action journal (every action name and input, in order) was replayed through the sealed runtime of the record's epoch against the public configuration, and the runtime wrote a fresh record. The public configuration is the sealed configuration with exactly these changes:
 
@@ -103,7 +104,7 @@ Sealed packets: hardened family `env/hardened-v6-aecadda` (inventory `1290c7fa9a
 ## 6. Verification performed before publication
 
 - First derivation (with a private copy of the sealed runtimes, never the sealed packets themselves): each of the 17 public records replayed in a fresh process with `tools.variant_demo --worker replay` against its public configuration and manifest, exit 0, bytes identical; each of the 17 sealed records replayed the same way against its sealed configuration; zero differences beyond the hash fields.
-- Second derivation (the published records): each record re-derived with the runtime shipped in `env/`, zero differences beyond hash fields from the first derivation. Then, from `env/`, `python3 -m headgasket replay` and `python3 -m headgasket verify` on the 13 family records and the reference: 14/14 exit 0, exact, without `--allow-unlisted-config`; `../scorer/hgj_scorer.py score` on all 17 records: accepted, primary comparison `agreement`, no shared-field disagreement, and the same points, checkpoints, seconds and mistake labels as the sealed independent results. The three exploratory records were replayed the same way (exit 0, exact) before their journals were withheld.
+- Second derivation (the published records): each record re-derived with the runtime shipped in `env/`, zero differences beyond hash fields from the first derivation. Then, from `env/`, `python3 -m headgasket replay` and `python3 -m headgasket verify` on the 13 family records and the reference: 14/14 exit 0, exact, without `--allow-unlisted-config`; `../scorer/hgj_scorer.py score` on all 17 records: accepted, primary comparison `agreement`, no disagreement on any shared bolt, mistake or time field, and the same points, checkpoints, seconds and mistake labels as the sealed independent results. (The scorer's printed `comparison of shared secondary fields` status reads `disagreement` on every record, these included, because the two checklists have different item sets: on the 14 published records, 1,247-1,248 scorer-only and 135-136 environment-only items. No field differed.) The three GPT exploratory records were replayed the same way (exit 0, exact) before their journals were withheld. The three `claude-haiku-5-5` baseline records each passed `tools/validate_submission.py` (exact replay and the independent scorer) before their journals were withheld; their `provenance.json` files list the withheld files' SHA-256 values.
 - Each `provenance.json` quotes its replay line.
 
 ## 7. Results at a glance
@@ -134,14 +135,22 @@ Exploratory model runs (variant V1, one run each; descriptive only; Success 0 fo
 | `gpt-6-astra` | yes | 15 | 0.416667 | CP02, CP04 | 16,190 + 1,404 = 17,594 | 30 | 528 (15) | 555.098 s |
 | `gpt-6-luna` | yes | 13 | 0.361111 | CP02, CP05, CP12 | 15,230 + 14,970 = 30,200 | 309 | 807 (117) | unknown |
 
+Low-cost baseline, `claude-haiku-5-5` through Claude Code with only the 18 job tools (variant V1, three runs, 2026-10-14; hardened runtime; descriptive only):
+
+| Run | Finished | Points / 18 | S_partial | Failed checkpoints | Productive + penalty s | Mistake events | Tool attempts (refused) | Client-reported wall s |
+|---|---|---:|---:|---|---|---:|---:|---:|
+| `claude-haiku-5-5-proxy-r1` | yes | 14 | 0.388889 | CP02, CP12 | 13,952 + 3,228 = 17,180 | 90 | 516 (83) | 626 |
+| `claude-haiku-5-5-proxy-r2` | yes | 12 | 0.333333 | CP02, CP11, CP12 | 13,976 + 4,602 = 18,578 | 102 | 530 (81) | 1,565 |
+| `claude-haiku-5-5-proxy-r3` | yes | 12 | 0.333333 | CP02, CP11, CP12 | 12,956 + 3,888 = 16,844 | 121 | 498 (107) | 828 |
+
 Reference (scripted, zero model calls): 18/18, 13,630 + 0 s, 436 actions.
 
 ## 8. What these records are not
 
-- Not a leaderboard and not a model comparison: one run per model, one variant, no repeats, no served-model attestation.
+- Not a leaderboard and not a model comparison: the paper's runs are one run per model, the baseline three runs of one model; one variant; no served-model attestation.
 - Not measured labour: every second is a cited analyst estimate from the configuration's labour table and mistake-time policy.
 - Not physical validation: the environment is a deterministic procedure state machine over a labelled geometry; no joint, soak or engine physics is in the score.
-- Not the raw host session and not the agent traces: the collector's private transcripts and close records are not published, nor are the per-action journals of the three model runs; only the scripted records, the model runs' scored results and the harness's summary counters are.
-- Model-call counts (Steps) and API-equivalent cost are unknown for all three runs; the host telemetry did not expose them and no rates were applied.
+- Not the raw host session and not the agent traces: the collector's private transcripts and close records are not published, nor are the per-action journals of the model runs; only the scripted records, the model runs' scored results and the harness's summary counters are.
+- Model-call counts (Steps) and API-equivalent cost are unknown for the paper's three runs; the host telemetry did not expose them and no rates were applied. For the `claude-haiku-5-5` baseline the client reported its turns, wall time and API-equivalent cost at the end of each session (in each `provenance.json`); these are the client's figures, not a provider receipt.
 
 ToolsEnabled is not affiliated with or endorsed by Anthropic, OpenAI or any other AI provider.

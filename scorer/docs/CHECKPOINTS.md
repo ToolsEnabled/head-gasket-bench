@@ -1,8 +1,8 @@
 # The twelve checkpoints
 
-The Head Gasket Job benchmark asks an agent to replace the head gasket of a
-simulated engine, a real 1990s 1.6 L SOHC inline-four, through a tool
-interface. The scorer never watches the agent work. It reads the saved run
+The Head Gasket Job benchmark asks an agent to replace the head gasket on a
+real 1990s 1.6 L SOHC inline-four in a deterministic procedure game (nothing
+physical is simulated), through a tool interface. The scorer never watches the agent work. It reads the saved run
 record afterwards (configuration, initial state, every tool call with its
 result, and the final state) and decides twelve yes-or-no questions. Each
 question has a weight; the weights add up to 18 points.
@@ -111,7 +111,10 @@ for agent wall time.
 
 A run may make at most 1,024 tool-call attempts (refused calls count). The
 scripted correct jobs use 436 to 440. A run that reaches the budget is scored
-on its final state and reported as incomplete with the reason. A run that
+on its final state and reported as incomplete with the reason. The environment
+still records a call made after the budget is spent (as a refused attempt), but
+this scorer refuses a record of more than 1,024 attempts (`record-domain`), so
+an agent should stop calling tools when `turns_remaining` reaches 0. A run that
 stops early is scored as it stands: a partial record earns the points its
 evidence supports, and a successful `finish` call is separate from passing
 every checkpoint. A successful action recorded after a committed finish is

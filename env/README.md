@@ -1,8 +1,11 @@
 # Head Gasket Job
 
 An AI agent connects to this environment over MCP and replaces the head
-gasket on a real 1990s 1.6 L SOHC inline-four. The engine sits cold on a
-service stand. The agent has to set the engine to top dead centre, strip the
+gasket on a real 1990s 1.6 L SOHC inline-four. The engine is on a service
+stand. The initial state reports the bench preparations (engine cold, battery
+isolated, coolant drained, engine supported and others) as not yet done: the
+agent records each with `prepare_condition`, and some removals need them. The
+agent has to set the engine to top dead centre, strip the
 belt, cover and accessories in a valid order, loosen and lift the head in
 stages, clean and measure the mating faces, decide what to do about bolts and
 a possibly warped head, fit the right gasket, torque the head in two stages in
@@ -10,8 +13,8 @@ the right order, restore the timing, put every part and attachment back, and
 call `finish`.
 
 Nothing physical is simulated. The environment is a deterministic procedure
-game over 1,255 named engine bodies with 18 tools. Every tool call, including
-a refused one, is journaled into a hash-chained record, and the record is
+game over 1,255 named engine bodies with 18 tools. Every well-formed tool
+call, including a refused one, is journaled into a hash-chained record, and the record is
 scored against twelve written checkpoints worth 18 points. A perfect score
 means the recorded procedure satisfied the written rules; it does not mean a
 real engine would run.
@@ -22,7 +25,11 @@ directory is the part you run.
 
 ## Requirements
 
-- CPython 3.12 (3.12.3 is the version the shipped records were made with).
+- CPython 3.12 (3.12.3 is the version the shipped records were made with;
+  replaying them needs exactly that version). Check `python3 --version`; if it is
+  not 3.12.x, write `python3.12` wherever this README says `python3`. `serve`
+  refuses any other interpreter, because a record made with one cannot be
+  replayed or submitted.
 - Nothing else. No pip install, no compiler, no browser.
 
 ```sh
@@ -40,7 +47,7 @@ Run those from this directory (the one with `hgj/` in it), or use
 | `look` | View engine parts, named surface IDs and the job clock |
 | `inspect` | Inspect an accessible component or surface (ID from `look`) |
 | `measure` | Measure `flatness`, `bolt_stretch`, `bolt_free_length`, `roughness`, `gasket_bore` or `gasket_thickness` |
-| `search_service_info` | Look up procedures, specifications and service diagrams (12 cited entries) |
+| `search_service_info` | Look up procedures, specifications and service diagrams (14 cited entries: the service entries E01-E12 and the benchmark-policy entries B01-B02) |
 | `remove` | Withdraw an accessible, released part to the service tray |
 | `install` | Fit one body from the tray or supply; timing phases in degrees |
 | `clean` | Clean a face or prepare a removed fastener (`plastic_scraper`, `solvent`, `abrasive_disc`, `thread_brush`) |
@@ -56,13 +63,20 @@ Run those from this directory (the one with `hgj/` in it), or use
 | `restore_attachment` | Restore a released attachment after reassembly |
 | `finish` | End the job and receive a compact score summary |
 
-`python3 -m headgasket tools --json` prints the exact JSON schemas the server
-publishes on `tools/list`. Refusals name the argument or predicate that failed
-without saying what the correct part, torque, order or next step would be.
+`python3 -m headgasket tools --json` prints the tool names, descriptions and
+input schemas that the server publishes on `tools/list` (which also carries each
+tool's annotations). Refusals name the argument or predicate that failed; some
+also name a missing prerequisite step (for example "replace first" or "Start all
+group fasteners before torque"). No refusal gives a torque value, the tightening
+sequence or the correct stock part.
 
 Budget: 1,024 tool-call attempts per run. Every attempt counts, refusals
-included; a refusal rolls the state back and costs no technician time. The
-reply to each call carries `turns_remaining`.
+included; a refusal rolls the state back, but its base technician seconds are
+charged as penalty time. The reply to each call carries `turns_remaining`. When
+it reaches 0, stop calling tools: the environment still records any further
+call (and charges it), and the pinned independent scorer cannot score a record
+of more than 1,024 attempts, so such a run cannot be submitted. That is a known
+issue of this environment epoch.
 
 ## The five variants
 
@@ -86,15 +100,28 @@ regenerates each of them byte for byte from `data/` and `removal-policy/`.
 ## Run it with an MCP client
 
 The server speaks MCP over stdio (newline-delimited JSON-RPC 2.0, protocol
-version `2025-11-25`, server name `headgasket`). One server process is one
-run: pick a variant and a new folder for the record.
+version `2025-11-25`, server name `headgasket`); clients that only connect to
+remote (HTTP) servers, or that need an older protocol version, cannot use it
+directly. One server process is one run: pick a variant and a new or empty
+folder for the record.
+
+The snippets use three placeholders for absolute paths: `/ABS/REPO` is your clone
+of the repository, `/ABS/RUNS` a folder for run records outside the clone, and
+`/ABS/WORK` an empty folder outside the clone where the agent's client runs.
 
 ```sh
-python3 /ABS/PATH/env/bin/headgasket-mcp serve --variant V1 --out /ABS/PATH/runs/v1-first-try
+python3 /ABS/REPO/env/bin/headgasket-mcp serve --variant V1 --out /ABS/RUNS/v1-first-try
 ```
 
 Use absolute paths; MCP clients start servers from a working directory you do
-not control. The folder named by `--out` must not already hold a run. The
+not control. The folder named by `--out` must be new or empty; `serve` creates
+a new one readable only by you, refuses a folder that is a link or holds links,
+and refuses a folder another `serve` is using. A start that makes no tool call
+(a client's health check such as `claude mcp list` or `claude mcp get`, a
+listed or restarted server, a session you quit before the agent called a tool)
+records nothing and leaves nothing behind; if a client kills the server before
+it can clean up, the next start clears those leftovers. Once the agent has made
+a call, the folder holds that run, and the next run needs a new folder. The
 server writes the record after every call, so an interrupted run keeps its
 last committed state, and exits when the client closes its input. Each write
 is synced to disk, so put `--out` on a local disk: a full run writes the
@@ -107,7 +134,7 @@ wiring, not a recommendation of any client or model.
 **Claude Code**
 
 ```sh
-claude mcp add headgasket -- python3 /ABS/PATH/tools/claude-code-proxy.py python3 /ABS/PATH/env/bin/headgasket-mcp serve --variant V1 --out /ABS/PATH/runs/v1-first-try
+claude mcp add headgasket -- python3 /ABS/REPO/tools/claude-code-proxy.py python3 /ABS/REPO/env/bin/headgasket-mcp serve --variant V1 --out /ABS/RUNS/v1-first-try
 MAX_MCP_OUTPUT_TOKENS=150000 claude
 ```
 
@@ -118,9 +145,9 @@ or in a project `.mcp.json`:
   "mcpServers": {
     "headgasket": {
       "command": "python3",
-      "args": ["/ABS/PATH/tools/claude-code-proxy.py", "python3",
-               "/ABS/PATH/env/bin/headgasket-mcp", "serve", "--variant", "V1",
-               "--out", "/ABS/PATH/runs/v1-first-try"]
+      "args": ["/ABS/REPO/tools/claude-code-proxy.py", "python3",
+               "/ABS/REPO/env/bin/headgasket-mcp", "serve", "--variant", "V1",
+               "--out", "/ABS/RUNS/v1-first-try"]
     }
   }
 }
@@ -131,11 +158,14 @@ or in a project `.mcp.json`:
 ```toml
 [mcp_servers.headgasket]
 command = "python3"
-args = ["/ABS/PATH/env/bin/headgasket-mcp", "serve", "--variant", "V1",
-        "--out", "/ABS/PATH/runs/v1-first-try"]
+args = ["/ABS/REPO/env/bin/headgasket-mcp", "serve", "--variant", "V1",
+        "--out", "/ABS/RUNS/v1-first-try"]
 startup_timeout_sec = 60
 tool_timeout_sec = 600
 ```
+
+This file is global, so every Codex session starts this server: remove the
+entry, or point `--out` at a new folder, after the run.
 
 **Any other stdio MCP client**
 
@@ -169,10 +199,32 @@ every message through unchanged, and the environment still writes its own
 record. Start Claude Code with `MAX_MCP_OUTPUT_TOKENS=150000`. Other clients may
 cut long results too; check yours before a run.
 
+**Keep the agent to the job tools**
+
+The repository holds complete correct solutions: the scripted records under
+`../runs/` and the reference route inside each configuration in `configs/`. An
+agent that can read files could copy them. Start the client in `/ABS/WORK`,
+outside the clone, with its own file and shell tools turned off, and say how you
+did it in `SUBMISSION.json` `notes`. The `claude-haiku-5-5` baseline ran Claude
+Code like this (headless, only the 18 job tools; `headgasket.mcp.json` holds the
+`mcpServers` object shown above):
+
+```sh
+cd /ABS/WORK
+MAX_MCP_OUTPUT_TOKENS=150000 claude -p "<the task prompt>" --tools "" \
+  --mcp-config /ABS/WORK/headgasket.mcp.json --strict-mcp-config \
+  --allowedTools mcp__headgasket --permission-mode dontAsk
+```
+
+The server cannot enforce this: it is not a sandbox (see [SECURITY.md](SECURITY.md)).
+
 **The task prompt**
 
-The environment carries no prompt; the client supplies one. The text used for
-the shipped scripted controls and earlier exploratory runs was:
+The environment carries no prompt; the client supplies one. The scripted controls
+need none (they send fixed tool calls), and the three GPT runs in the paper were
+collected with the research collector's own task text, which is not part of this
+repository. The `claude-haiku-5-5` baseline runs used this text verbatim, and you
+can use it too:
 
 > Replace the failed head gasket on the prepared service-stand engine and
 > restore the assembly and timing. Use the headgasket tools to inspect, look
@@ -192,11 +244,11 @@ All in the `--out` folder:
 |---|---|
 | `run.json` | The record (`hgj/run/v2`): configuration, source identity, initial state, every action with its result and state hashes, final state, score |
 | `actions.jsonl` | The action journal, one canonical JSON line per attempt |
-| `report.json` | Usage envelope: wall-clock seconds, attempted/successful/refused counts, terminal reason, score summary |
+| `report.json` | Usage envelope: wall-clock seconds, attempted/successful/refused counts, terminal reason, and copies of the score's parts: the time ledger, the mistake events (with the arguments of refused calls), bolt and checklist results |
 | `finish-record.json` | The complete record at the moment `finish` succeeded (absent if the run never finished) |
-| `launch.json` | Variant, configuration pin, source pin, interpreter version, UTC start and end |
+| `launch.json` | Variant, configuration pin, source pin, interpreter version, UTC start and end (written when the server stops after at least one call) |
 
-The record is written atomically after every call. Each action row carries
+A start without any tool call leaves no files. The record is written atomically after every call. Each action row carries
 `pre_state_sha256`, `post_state_sha256` and `previous_action_sha256`; the
 chain starts at the configuration hash, so no action can be inserted, removed
 or reordered without breaking it. See [docs/RECORD-FORMAT.md](docs/RECORD-FORMAT.md).
@@ -205,6 +257,12 @@ The reply the agent sees from `finish` is a compact summary
 (`hgj/finish-summary/v1`, at most 16 KiB): points, pass/fail totals,
 technician seconds, mistake counts, and the hash and byte count of the full
 `finish-record.json`. The full scored record stays on disk.
+
+Size: every `look` result (about 200,000 characters) is stored twice, in
+`run.json` and in `actions.jsonl`, so each `look` call adds about 0.4 MB to the
+folder. A run with about 150 or more `look` calls is larger than the 64 MB a
+submission may be, and a `run.json` larger than 64 MiB (about 320 `look` calls)
+cannot be replayed.
 
 ## Scoring
 
@@ -217,11 +275,12 @@ and `hgj/repair_scoring.py`. All durations are analyst estimates.
 
 ## Replay and verify
 
-Any record replays bit for bit under the pinned source:
+Any record replays bit for bit under the pinned source and the CPython version
+that made it (3.12.3 for the published records):
 
 ```sh
-python3 -m headgasket replay --record /ABS/PATH/runs/v1-first-try/run.json
-python3 -m headgasket verify --run /ABS/PATH/runs/v1-first-try
+python3 -m headgasket replay --record /ABS/RUNS/v1-first-try/run.json
+python3 -m headgasket verify --run /ABS/RUNS/v1-first-try
 ```
 
 `replay` rebuilds the game from the record's configuration, re-applies every
@@ -237,8 +296,9 @@ The runtime is chosen by the source manifest the record names. The current
 runtime (`data/environment-source.json`, hardened epoch `aecadda`) serves new
 runs and replays the scripted family. The earlier amended runtime (epoch
 `24a5713`, `epochs/amended-v5/`, pinned in `configs/PINS.json` under `epochs`)
-is replay-only: it made the published V1 reference run and the three
-exploratory model runs. It differs from the current runtime in four modules
+is replay-only: it made the published V1 reference run and the three GPT
+exploratory runs of the paper (the `claude-haiku-5-5` baseline runs used the
+current runtime). It differs from the current runtime in four modules
 (`api`, `benchmark_geometry`, `game`, `mcp`: the compact finish reply and the
 refusal wording); both use the same five configurations.
 
@@ -271,7 +331,8 @@ open a pull request. `python3 -m headgasket validate <folder>` runs the
 environment's part of those checks (finished run, pinned configuration, exact
 replay) on its own. It refuses a run that did not call `finish`; the
 repository's validator accepts such a run, and it is scored and listed as it
-stands.
+stands. Run the client outside the repository with only the job tools (above),
+and stop when `turns_remaining` reaches 0.
 
 Records contain exactly what your client sent as tool arguments. Look at the
 file before you submit it.
@@ -283,7 +344,7 @@ shipped generator, so they can be rebuilt and compared with the pins:
 
 ```sh
 python3 -m headgasket prepare --variant V1 --out V1.json && sha256sum V1.json configs/V1.configuration.json
-python3 -m headgasket family --out /ABS/PATH/new-family     # 13 serves + 26 replays, about an hour
+python3 -m headgasket family --out /ABS/RUNS/new-family     # 13 serves + 26 replays, about an hour
 ```
 
 ## Tests
@@ -292,8 +353,8 @@ python3 -m headgasket family --out /ABS/PATH/new-family     # 13 serves + 26 rep
 python3 -m unittest discover
 ```
 
-The suite is standard-library `unittest`; it takes about half a minute and
-runs no model. Skipped tests are the Amendment 1 "pure helper" checks that
+The suite is standard-library `unittest`; it takes about a minute and runs no
+model. Skipped tests are the Amendment 1 "pure helper" checks that
 need a reference scorer that is not part of this release.
 
 ## Layout

@@ -15,11 +15,12 @@ folder carries the scored results only.
 | `independent-score.json` | report-level independent scores of the sealed record: the corrected scorer epoch (the paper's numbers) and the original seal |
 | `provenance.json` | epoch pins, the hashes of the withheld files and of the sealed originals, and the verification lines |
 
-The numbers match the paper's Table 1 and Appendix F. Before publication each
-public re-derived record was replayed byte for byte with `env/` and rescored by
-`scorer/` with the same result as the sealed independent result; the hashes of
-the withheld `run.json`, `actions.jsonl` and `report.json` are in each
-`provenance.json` and `RESULT.md`.
+The three GPT runs were collected with the research collector's own task text,
+which is not part of this repository. Their numbers match the paper's Table 1
+and Appendix F. Before publication each public re-derived record was replayed
+byte for byte with `env/` and rescored by `scorer/` with the same result as the
+sealed independent result; the hashes of the withheld `run.json`,
+`actions.jsonl` and `report.json` are in each `provenance.json` and `RESULT.md`.
 
 ## Low-cost baseline: `claude-haiku-5-5` (three runs, 2026-10-14)
 
@@ -37,9 +38,12 @@ turns, wall time and API-equivalent cost. Before their journals were withheld,
 each record passed `tools/validate_submission.py` (exact replay and the
 independent scorer).
 
-Release 0.1.1 listed three other `claude-haiku-5-5` runs here (0/18 each). They
-were withdrawn in 0.1.2: Claude Code had saved `look`'s result to a file and
-shown the model a short preview, so those runs measured the client, not the
-model.
+Release 0.1.1 listed three other `claude-haiku-5-5` runs here (0/18 each, after
+69, 19 and 15 tool calls, with `MAX_MCP_OUTPUT_TOKENS=150000` but without the
+proxy). They were withdrawn in 0.1.2: Claude Code had saved `look`'s result to a
+file and shown the model a short preview, so those runs measured the client, not
+the model. Three runs before those, with the client's default limit of 25,000
+tokens, stopped after 16, 52 and 32 tool calls at 0/18 and were never listed, for
+the same reason. None of these six is on the board.
 
 ToolsEnabled is not affiliated with or endorsed by Anthropic, OpenAI or any other AI provider.

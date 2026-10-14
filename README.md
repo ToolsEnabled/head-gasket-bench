@@ -28,16 +28,16 @@ and asks it to repair one.
 |---|---|---|
 | [`env/`](env/) | The environment: an MCP stdio server with 18 tools, five variants (V1-V5), replay and verify. Python 3.12 standard library only, no network | MIT |
 | [`scorer/`](scorer/) | The independent checkpoint scorer: re-derives the twelve checkpoints from a saved record without trusting the environment's score | MIT |
-| [`runs/`](runs/) | The published records: the 13-case scripted family, the scripted V1 reference, and the scored results of three exploratory model runs ([RECORDS.md](runs/RECORDS.md)) | MIT (data) |
+| [`runs/`](runs/) | The published records: the 13-case scripted family, the scripted V1 reference, and the scored results of six exploratory model runs: the paper's three GPT runs and a three-run `claude-haiku-5-5` baseline ([RECORDS.md](runs/RECORDS.md)) | MIT (data) |
 | [`paper/`](paper/) | The report: `paper.pdf` (64 pages), `paper.docx`, `paper.txt`, figures, the claim-to-data ledger | CC BY 4.0 |
 | [`leaderboard/`](leaderboard/) | `board.json`, built from `runs/` by `tools/build_board.py` | MIT |
-| [`tools/`](tools/) | `validate_submission.py`, `build_board.py`, `make_release.sh` | MIT |
+| [`tools/`](tools/) | `validate_submission.py`, `build_board.py`, `check_pr_scope.py` (the pull-request scope check), `claude-code-proxy.py`, `make_release.sh` | MIT |
 | [`BENCHMARK-CARD.md`](BENCHMARK-CARD.md), [`REPRODUCIBILITY.md`](REPRODUCIBILITY.md) | What the benchmark is and is not; how to replay, rescore and collect | CC BY 4.0 |
 
 ## Results so far
 
-Three exploratory runs on the standard job (V1), one per model, plus the
-scripted reference (from the paper's Table 1):
+The paper's three exploratory runs on the standard job (V1), one per model,
+plus the scripted reference (from the paper's Table 1):
 
 | Agent | Model | Points / 18 | Score (S_partial) | Success (S_full) | Technician s (productive + penalty) | Mistake events |
 |---|---|---:|---:|---:|---|---:|
@@ -50,8 +50,10 @@ A low-cost baseline: three runs of `claude-haiku-5-5` through Claude Code
 (headless, only the 18 job tools, the server started through
 `tools/claude-code-proxy.py`) finished with 14, 12 and 12 of 18 points
 ([runs/exploratory](runs/exploratory/README.md)). Release 0.1.1 had listed three
-0/18 runs instead; Claude Code had hidden most of `look`'s result from them, so
-they were withdrawn.
+0/18 runs instead, and three runs before those were never listed. In all six,
+Claude Code had kept most of `look`'s result from the model, so they measured the
+client rather than the model: the three 0.1.1 rows are withdrawn, and none of the
+six is on the board.
 
 In the paper's own words: "Table 1 reports one exploratory run per model on the
 standard job (V1), with the scripted reference for comparison. No run achieved
@@ -66,25 +68,37 @@ folders carry the scored results only.
 ## Quick start
 
 You need CPython 3.12 and nothing else: no pip install, no compiler, no
-browser. A record replays exactly only under the CPython version that made it;
-the published records were made with 3.12.3.
+browser. Check `python3 --version`; if it is not 3.12.x, write `python3.12`
+wherever this README says `python3` (`serve` refuses any other interpreter,
+because a record made with one cannot be replayed or submitted). A record
+replays exactly only under the CPython version that made it; the published
+records were made with 3.12.3.
+
+The commands below use three placeholders for absolute paths: `/ABS/REPO` is
+your clone of this repository, `/ABS/RUNS` a folder for run records outside the
+clone, and `/ABS/WORK` an empty folder outside the clone where the agent's client
+runs.
 
 ```sh
-git clone https://github.com/ToolsEnabled/head-gasket-bench
-cd head-gasket-bench/env
+git clone https://github.com/ToolsEnabled/head-gasket-bench /ABS/REPO
+cd /ABS/REPO/env
 python3 -m headgasket pins --check     # the pinned runtime files and the five configurations
 python3 -m headgasket tools            # the 18 tools
 ```
 
 **Connect an MCP client.** One server process is one run: pick a variant and a
-new folder for the record. Use absolute paths. These are the environment
-README's snippets (examples of the wiring, not a recommendation of any client
-or model):
+new or empty folder for the record. Use absolute paths. A start that makes no
+tool call (a client's health check such as `claude mcp list` or
+`claude mcp get`, or a session you quit before the agent called a tool) leaves
+nothing behind, so the folder stays free for the real session; once the agent has
+made a call, the folder holds that run, and the next run needs a new folder. These
+are the environment README's snippets (examples of the wiring, not a
+recommendation of any client or model):
 
 Claude Code
 
 ```sh
-claude mcp add headgasket -- python3 /ABS/PATH/tools/claude-code-proxy.py python3 /ABS/PATH/env/bin/headgasket-mcp serve --variant V1 --out /ABS/PATH/runs/v1-first-try
+claude mcp add headgasket -- python3 /ABS/REPO/tools/claude-code-proxy.py python3 /ABS/REPO/env/bin/headgasket-mcp serve --variant V1 --out /ABS/RUNS/v1-first-try
 MAX_MCP_OUTPUT_TOKENS=150000 claude
 ```
 
@@ -95,9 +109,9 @@ or in a project `.mcp.json`:
   "mcpServers": {
     "headgasket": {
       "command": "python3",
-      "args": ["/ABS/PATH/tools/claude-code-proxy.py", "python3",
-               "/ABS/PATH/env/bin/headgasket-mcp", "serve", "--variant", "V1",
-               "--out", "/ABS/PATH/runs/v1-first-try"]
+      "args": ["/ABS/REPO/tools/claude-code-proxy.py", "python3",
+               "/ABS/REPO/env/bin/headgasket-mcp", "serve", "--variant", "V1",
+               "--out", "/ABS/RUNS/v1-first-try"]
     }
   }
 }
@@ -108,14 +122,18 @@ Codex CLI (`~/.codex/config.toml`)
 ```toml
 [mcp_servers.headgasket]
 command = "python3"
-args = ["/ABS/PATH/env/bin/headgasket-mcp", "serve", "--variant", "V1",
-        "--out", "/ABS/PATH/runs/v1-first-try"]
+args = ["/ABS/REPO/env/bin/headgasket-mcp", "serve", "--variant", "V1",
+        "--out", "/ABS/RUNS/v1-first-try"]
 startup_timeout_sec = 60
 tool_timeout_sec = 600
 ```
 
-Any other stdio MCP client: start the same command and exchange one JSON-RPC
-object per line (protocol version `2025-11-25`); see [env/README.md](env/README.md).
+This file is global, so every Codex session starts this server: remove the entry,
+or point `--out` at a new folder, after the run.
+
+Any other stdio MCP client that speaks MCP protocol version `2025-11-25`: start
+the same command and exchange one JSON-RPC object per line; see
+[env/README.md](env/README.md).
 
 **Large tool results.** `look` returns about 200,000 characters (every part on the engine). Claude
 Code saves an MCP result to a file and shows the model only a short preview
@@ -128,38 +146,75 @@ every message through unchanged, and the environment still writes its own
 record. Start Claude Code with `MAX_MCP_OUTPUT_TOKENS=150000`. Other clients may
 cut long results too; check yours before a run.
 
-**Run.** Give the agent the task prompt from [env/README.md](env/README.md#run-it-with-an-mcp-client)
-(or your own, and record it) and let it work until it calls `finish` or the
-1,024-attempt budget runs out.
-
-**Validate.** From `env/`:
+**Keep the agent to the job tools.** This repository holds complete correct
+solutions: the scripted records under `runs/` and the reference route inside each
+configuration under `env/configs/`. An agent that can read files could copy them.
+Start the client in `/ABS/WORK`, outside the clone, with its own file and shell
+tools turned off, and say how you did it in `SUBMISSION.json` `notes`. The
+`claude-haiku-5-5` baseline ran Claude Code like this (headless, only the 18 job
+tools; `headgasket.mcp.json` holds the `mcpServers` object shown above):
 
 ```sh
-python3 -m headgasket replay --record /ABS/PATH/runs/v1-first-try/run.json
-python3 -m headgasket verify --run /ABS/PATH/runs/v1-first-try
-cd ../scorer && python3 hgj_scorer.py score /ABS/PATH/runs/v1-first-try/run.json
+cd /ABS/WORK
+MAX_MCP_OUTPUT_TOKENS=150000 claude -p "<the task prompt>" --tools "" \
+  --mcp-config /ABS/WORK/headgasket.mcp.json --strict-mcp-config \
+  --allowedTools mcp__headgasket --permission-mode dontAsk
 ```
 
-**Submit.** Copy `run.json`, `actions.jsonl` and `report.json` into
-`runs/submitted/<name>/`, add `SUBMISSION.json`, then:
+**Run.** Give the agent the task prompt from [env/README.md](env/README.md#run-it-with-an-mcp-client)
+(or your own, and record it) and let it work until it calls `finish` or the
+1,024-attempt budget runs out. Every attempt counts, refused ones included, and
+a refused attempt is charged its base technician seconds as penalty. When
+`turns_remaining` reaches 0, stop calling tools: the environment still records
+any further call, and the pinned independent scorer cannot score a record of
+more than 1,024 attempts, so such a run cannot be submitted (a known issue of
+this environment epoch).
+
+**Validate.** From `/ABS/REPO/env`:
+
+```sh
+python3 -m headgasket replay --record /ABS/RUNS/v1-first-try/run.json
+python3 -m headgasket verify --run /ABS/RUNS/v1-first-try
+cd ../scorer && python3 hgj_scorer.py score /ABS/RUNS/v1-first-try/run.json
+```
+
+The scorer's last line, `comparison of shared secondary fields (bolts, mistakes,
+time)`, says `disagreement` on every record, the published 18/18 ones included,
+because the two checklists have different item sets (`hgj_scorer.py compare`
+prints their sizes). A field that really differs is printed as a line under it;
+an independent value of `None` means unknown, not a difference. The published
+records have no such line.
+
+**Submit.** From the repository root (`cd /ABS/REPO`), copy `run.json`,
+`actions.jsonl` and `report.json` into `runs/submitted/<name>/`, add
+`SUBMISSION.json` ([SUBMISSIONS.md](SUBMISSIONS.md) shows it), then:
 
 ```sh
 python3 tools/validate_submission.py --write-result runs/submitted/<name>
 python3 tools/validate_submission.py runs/submitted/<name>
+python3 tools/build_board.py
 ```
 
-and open a pull request. [SUBMISSIONS.md](SUBMISSIONS.md) has the details.
+and open a pull request that adds `runs/submitted/<name>/` and the rebuilt
+`leaderboard/board.json`. [SUBMISSIONS.md](SUBMISSIONS.md) has the details.
 
 ## The board
 
 [`leaderboard/board.json`](leaderboard/board.json) lists one row per run, as
 recorded: model label, client, variant, points, S_partial, S_full, penalty and
 productive seconds, date and source. Rows are sorted by variant, then
-S_partial. The four rows there today are runs by ToolsEnabled and are marked
-`exploratory`; they describe behaviour and do not rank models. Submitted rows
+S_partial. The seven rows there today are runs by ToolsEnabled (the scripted
+reference and six model runs) and are marked `exploratory`; they describe
+behaviour and do not rank models. Submitted rows
 appear when a pull request passes validation and is merged. ToolsEnabled checks
 that a submitted record replays exactly and scores the same under the
 independent scorer; it does not verify which model served the run.
+
+## Release files
+
+Each release on GitHub has `head-gasket-bench-<version>.tar.gz` (the repository
+at the release commit), `paper.pdf` and `SHA256SUMS`. Download the three into one
+folder and run `sha256sum -c SHA256SUMS` (on macOS, `shasum -a 256 -c SHA256SUMS`).
 
 ## Licences
 

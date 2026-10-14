@@ -9,7 +9,7 @@ unchanged, except that in the reply to tools/list it adds
 _meta["anthropic/maxResultSizeChars"] to each tool, so Claude Code passes results
 up to that size to the model inline. The environment still writes its own record.
 
-usage: python3 /ABS/PATH/tools/claude-code-proxy.py [--max-chars N] -- python3 /ABS/PATH/env/bin/headgasket-mcp serve ...
+usage: python3 /ABS/REPO/tools/claude-code-proxy.py [--max-chars N] -- python3 /ABS/REPO/env/bin/headgasket-mcp serve ...
 """
 import json, subprocess, sys, threading
 

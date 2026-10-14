@@ -69,8 +69,8 @@ configuration pins.
 
 The configurations shipped in `configs/` are byte-identical to the
 configurations embedded in every published record under `../runs/` (the 13
-scripted family records, the V1 reference and the three exploratory model
-runs), and `python3 -m headgasket prepare` regenerates them byte for byte:
+scripted family records, the V1 reference and the exploratory model runs),
+and `python3 -m headgasket prepare` regenerates them byte for byte:
 
 | Variant | Public pin | Sealed pin (not shipped) |
 |---|---|---|

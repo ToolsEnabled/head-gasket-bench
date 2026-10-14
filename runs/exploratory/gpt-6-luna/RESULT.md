@@ -68,7 +68,7 @@ Token counters keep the host convention: cache reads are reported separately and
 - Token counters are a prefix: the latest cumulative counters observed before the capture stop, not terminal totals.
 - The environment-scored final state at the finish action was accepted as the run's result by the coordinator's dated disposition (2026-10-10T04:35Z): "harness capture closed on the oversized finish response; model turn not terminal; job state final at the finish action". The original infrastructure-stop record is retained beside it. No fourth repair was run.
 - Luna made 40 consecutive refused restoration requests (actions 424 to 463), removed the head and refitted the gasket without cleaning (692 to 693), and finished with 100 attachments still released (CP12).
-- The hardened runtime epoch (aecadda) that fixes the oversized finish reply (compact `hgj/finish-summary/v1`, at most 956 bytes) postdates this run; no model run has used it.
+- The hardened runtime epoch (aecadda) that fixes the oversized finish reply (compact `hgj/finish-summary/v1`, at most 956 bytes) postdates this run; none of the paper's model runs used it (the 0.1.2 `claude-haiku-5-5` baseline did).
 - Served model and tier are unattested; the label is the request. No seed; the run is not reproducible as a model run, only as a record (replay).
 - One run, one variant, no repeats: no interval, no comparison with the other runs.
 

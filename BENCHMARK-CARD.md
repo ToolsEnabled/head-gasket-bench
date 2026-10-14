@@ -53,7 +53,10 @@ they describe behaviour and do not rank the models. Served identity, model-call
 Steps and API-equivalent price remain unavailable; recorded token counters and agent
 wall intervals are retained. GPT-6-Luna's counters cover the observed prefix only; its
 final-turn coverage and wall time are unavailable. The larger comparison remains
-pending.
+pending. Release 0.1.2 adds a low-cost baseline outside the paper: three runs of
+claude-haiku-5-5 through Claude Code with only the 18 job tools, on the current
+(hardened) runtime, which finished with 14, 12 and 12 of 18 points (Success 0); they
+too describe behaviour only.
 
 ## Collection process
 

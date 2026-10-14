@@ -4,8 +4,11 @@ No third-party code is bundled. The runtime is CPython standard library only.
 
 ## The service corpus (`data/service.json`)
 
-The twelve entries E01-E12 that `search_service_info` returns paraphrase
-public service and product guidance. The corpus cites its sources by ID; the
+The twelve service entries E01-E12 that `search_service_info` returns
+paraphrase public service and product guidance. (The configurations also embed
+two benchmark-policy entries, B01 and B02, which cite only the benchmark's own
+rules (source B1); search can return them too, so it has 14 cited entries in
+all.) The corpus cites its sources by ID; the
 source records carry the title, the kind of document and neutral custody
 hashes of the citation record. No source text, page image, PDF or URL is
 reproduced, and no source document is shipped.

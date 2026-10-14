@@ -4,8 +4,12 @@ ToolsEnabled, Inc. · October 2026
 
 Replaying a saved record, rescoring it independently, checking the report's
 numbers and collecting a new model run are separate operations. This
-repository supports the first three for every published record and supplies
-the environment for the fourth. Everything below needs CPython 3.12 and the
+repository supports the first two for every published scripted record (the 13
+family cases and the V1 reference), the third for the report's headline
+numbers, and supplies the environment for the fourth. The model runs'
+journals are withheld (only their scored results and the files' SHA-256 values
+are published), so their scores cannot be replayed or rescored from this
+repository. Everything below needs CPython 3.12 and the
 standard library only. Questions and corrections: issues on
 ToolsEnabled/head-gasket-bench, or support@toolsenabled.ai.
 
@@ -28,7 +32,8 @@ The configuration must be one of the five pinned configurations in
 runtime is selected by the source manifest the record names: the hardened
 runtime (`aecadda`) for the family, the amended runtime (`24a5713`, in
 `env/epochs/amended-v5/`) for the V1 reference. A record replays only under the
-CPython version that made it; the published records were made with 3.12.3.
+CPython version that made it; the published records were made with 3.12.3, so
+replaying them needs exactly that version.
 
 Replay proves that the recorded tool inputs reproduce the recorded score under
 the pinned source. It does not prove which model made the calls, how long it
@@ -51,7 +56,10 @@ Primary checkpoint outcomes and the shared bolt, mistake and time fields must
 agree. The secondary checklists use different item sets (the environment's
 1,647-1,674 items against the scorer's 2,759-2,799) and are never compared as
 equal percentages; agreement on shared fields does not make every predicate
-equal.
+equal. Because the item sets differ, the scorer's line `comparison of shared
+secondary fields (bolts, mistakes, time)` reads `disagreement` on every record,
+the 18/18 ones included; `compare` lists the item-set sizes and, below them, any
+field that really differs. For the published records no field differs.
 
 ## Regenerate the configurations and the scripted family
 
@@ -73,7 +81,7 @@ packet inventory and a JSON pointer. The producers are the sealed research
 packets, which are not part of this repository; their locators are written as
 `sealed:<lane>/<packet>/<path>` (see `paper/README.md`). The headline numbers
 can be checked directly against this repository: Table 1 and Appendix F against
-`runs/reference/V1-amended/` and the three `runs/exploratory/*/environment-score.json`
+`runs/reference/V1-amended/` and the three GPT runs' `runs/exploratory/gpt-*/environment-score.json`
 and `independent-score.json` files, and the scripted family against
 `runs/family/`. The report's own analysis toolchain (`tools.results_build` and
 its audits) ran in the sealed research workspace and is not shipped.
@@ -98,8 +106,11 @@ trace (18/18, 13,630 seconds), published in `runs/reference/V1-amended/`.
 ## Collect a new run
 
 Serve a variant with `env/bin/headgasket-mcp serve --variant V? --out NEW_FOLDER`
-and connect any MCP client (`env/README.md` has the wiring and the task
-prompt). Record the client and its version, the model identifier as the
+under CPython 3.12 and connect a stdio MCP client (`env/README.md` has the
+wiring and the task prompt). Run the client from an empty folder outside this
+repository with only the job tools, because the repository holds complete correct
+solutions, and stop when `turns_remaining` reaches 0 (a record of more than 1,024
+attempts cannot be scored). Record the client and its version, the model identifier as the
 provider reports it, the effort and service settings, the prompt, model calls,
 input and output tokens, agent wall time, the termination, and dated API rates
 if you want a cost. Steps means model calls, not tool attempts. Keep failed,

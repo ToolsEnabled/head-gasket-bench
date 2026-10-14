@@ -1,7 +1,8 @@
 # Leaderboard data
 
 `board.json` is built from the runs tree by `python3 tools/build_board.py`
-(and checked with `--check` on every pull request). It is a JSON object with
+(and checked with `--check` on every pull request that touches `runs/` or
+`leaderboard/`). It is a JSON object with
 `schema` (`head-gasket-bench/board/v1`), a `note`, the list of `fields`, and
 `rows`, one per run, as recorded; nothing is averaged.
 
@@ -17,7 +18,7 @@
 | `penalty_s`, `productive_s` | charged technician seconds: analyst estimates, not measured labour |
 | `date` | the run date (YYYY-MM-DD) |
 | `source` | `run by ToolsEnabled`, or `submitted by <submitter>` |
-| `exploratory` | `true` for the runs ToolsEnabled made before submissions opened (single runs that describe behaviour and do not rank models); `false` for submissions |
+| `exploratory` | `true` for the runs made by ToolsEnabled (the scripted reference and single model runs that describe behaviour and do not rank models); `false` for submissions |
 
 Rows are sorted by variant, then `s_partial` (highest first), then `name`.
 The same runs always give the same bytes.

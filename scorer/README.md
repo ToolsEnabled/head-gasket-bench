@@ -60,7 +60,16 @@ requirements not met, then points out of 18, S_full, S_partial, the
 technician-time estimate (productive and penalty seconds, analyst estimates),
 the typed mistakes, the tool-call counts, and the comparison with the score
 the environment embedded in the record. A record the scorer cannot accept is
-refused with a named reason and exit status 2.
+refused with a named reason and exit status 2 (for example `record-domain` for a
+record of more than 1,024 attempts).
+
+The last line, `comparison of shared secondary fields (bolts, mistakes, time)`,
+reads `disagreement` whenever the two checklists have different item sets,
+which they always do (the scorer has about 1,250 items the environment does not,
+and the environment about 135 the scorer does not). The fields that differ are
+listed under it (an independent value of `None` means unknown, not a
+disagreement); `compare` also prints the item-set sizes. The published records
+list none.
 
 Show the comparison in detail (exit status 1 on a primary disagreement):
 

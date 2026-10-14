@@ -11,11 +11,13 @@ Please report a security problem privately, not in a public issue:
 
 - use **Report a vulnerability** on this repository's **Security** tab
   (GitHub's private vulnerability reporting), or
-- email **support@toolsenabled.ai**.
+- email **security@toolsenabled.ai**.
 
-Tell us the environment version (`python3 -m headgasket --version`, and the
-`source_manifest_sha256` that every run record carries), what you found, and
-how to reproduce it. We read every report, reply as soon as we can, keep you
+Tell us the environment version (`python3 -m headgasket --version`, which
+prints the launcher's release, 0.1.2 for this one, and the
+`source_manifest_sha256` that every run record carries; the MCP `serverInfo`
+version still says 0.1.0, because that string sits in the pinned runtime), what
+you found, and how to reproduce it. We read every report, reply as soon as we can, keep you
 informed while we fix it, tell you when the fix is released, and credit you in
 the release notes if you want that.
 
@@ -59,8 +61,19 @@ check.
 
 Requests are bounded at 64 KiB per line, configurations at 16 MiB, run
 records at 64 MiB, source files at 128 KiB, and the finish reply at 16 KiB
-(summary) and 1 MiB (transport line). Oversized or malformed requests get a
-JSON-RPC error and never reach the game state.
+(summary) and 1 MiB (transport line). Oversized or malformed requests,
+including lines that are not valid UTF-8, get a JSON-RPC error and never reach
+the game state. (The launcher reads its input as UTF-8 and turns invalid bytes
+into lone surrogates, which the pinned server refuses with error -32602. The
+pinned server itself still stops when it is handed a stream that decodes
+strictly and meets invalid UTF-8; that is a known issue for the next
+environment epoch.)
+
+The launcher writes only into the `--out` folder: it creates a new folder
+readable only by you, refuses a folder that is a link, holds links or is in use
+by another server, and writes `launch.json` without following links. The pinned
+server writes its files by name inside that folder; keep `--out` in a place
+other people cannot write to.
 
 The server is not a sandbox for the AI client that drives it. It cannot stop a
 client from using other tools, reading files or calling networks; isolating
