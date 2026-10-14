@@ -1,0 +1,111 @@
+{
+ "derivation": "Re-derived from the sealed action journal (every action name and input, in order) under the public configuration with the sealed runtime; identical to the sealed record except for the documented string substitutions and dropped citation-digest keys and the hash fields that depend on them (configuration pin, reference pins, state identity, per-action chain and state hashes, score and run hashes). Second public derivation (2026-10-14): the same journal replayed by the same runtime against the configuration the published environment generates, which recomputes three derived digests over the public inputs (the analyst time policy labor_content_sha256 and S7 labor_source_record_sha256, and the reassembly checklist source_raw_sha256) so that the independent scorer accepts the record; zero differences beyond hash fields.",
+ "epoch": {
+  "configuration_checkpoint_label": "amendment-1-20261009",
+  "configuration_sha256_public": "a4e22f01d85b799e0bb92b90c56d423e792a56b5134750c6aa4d4edf9b6e232e",
+  "configuration_sha256_sealed": "e2b962f610544b320c40c08927da3c26743c9fb9c8a71bcd1c985a0b45b07984",
+  "environment_source_identity_sha256": "28a625063ff51e7a4464191088a17afe0ce012070b68f679fe98c3e201b41d0a",
+  "independent_scorer_epoch_commit": "064d14af4f1f9819b76ae0ab4a9cff01efcf6983",
+  "runtime_commit": "24a57135fc5d86e70e668880d8119556a40a9611",
+  "scorer_checkpoint_revision": "amendment-2-20261010",
+  "source_manifest_sha256": "10967be0011b7c7808a47a108e74b1076f5141b10a5d5a7d39fa4d4087e8179b"
+ },
+ "first_public_derivation": {
+  "configuration_sha256": "67939d46db2ff59d051cb696ad454cd1274c360bcf8e910c543ecc72535b8e45",
+  "published": false,
+  "run_sha256": "82dae695f385b16ec7071931c03ee53f313f74857010ba472e6b3a977a8bbb2a"
+ },
+ "independent": {
+  "corrected_epoch_result": {
+   "file": "independent-result.json",
+   "scored_record_sha256": "47aa83bd91c98ef080400e790ad72213b09caad4c6829abadb2ab0b706298fc3",
+   "scorer_commit": "064d14af4f1f9819b76ae0ab4a9cff01efcf6983",
+   "scorer_epoch": "amendment-2-20261010",
+   "sealed_in": "repair-corrected-scorer-epoch-v1 (inventory 3348ff7070059e739198622621f9d334f17b2e2842913ee2e1b8deea9a20e5b3)",
+   "sha256": "3341881f22757eab48b2d734268b2b1731372447e805fecac2ef3ca184bfe8aa"
+  },
+  "original_seal_result": {
+   "file": "independent-result-original-seal.json",
+   "scored_record_sha256": "47aa83bd91c98ef080400e790ad72213b09caad4c6829abadb2ab0b706298fc3",
+   "sealed_in": "repair-luna-v2-amendment2-v1 (inventory 4c658724e3095d53ee1ada61e039b65c93ba75614718cb433a6bf3a0aac9e894)",
+   "sha256": "dba07338998ce6c534a7faa69ffdd4247af347b5d7777bc9b45274bc7e2c13dc"
+  }
+ },
+ "kind": "exploratory",
+ "public_score_sha256": "0f1f27b6a6f2cfe21c45a793c670a0ab7ee1742a132a6431b2e04fcae5f3053f",
+ "published_files": {
+  "environment-score.json": {
+   "bytes": 5266,
+   "sha256": "a42e44da6f5df6840465841c7f1ecbaa092ec4e1bf7eb5af44fe4ce0efeea4b1"
+  },
+  "independent-score.json": {
+   "bytes": 9453,
+   "sha256": "21e675334ebb128865026fb4dfd06251c64442bff9b4a647344ddbc3f7a24a3e"
+  }
+ },
+ "result": {
+  "S_full": 0,
+  "S_partial": 0.3611111111111111,
+  "actions": 807,
+  "failed_checkpoints": [
+   "CP02",
+   "CP05",
+   "CP12"
+  ],
+  "finished": true,
+  "mistake_count": 309,
+  "mistakes": {
+   "blocked_removal": 7,
+   "invalid_action": 110,
+   "missing_attachment_restore": 1,
+   "redo_work": 191,
+   "wrong_gasket": 1
+  },
+  "penalty_seconds": 14970,
+  "points": 13,
+  "productive_seconds": 15230,
+  "total_points": 18
+ },
+ "run": "gpt-6-luna",
+ "schema": "head-gasket-bench/run-provenance/v1",
+ "sealed_record": {
+  "actions_sha256": "51d981b1e5aa55cc2b0c58400d40e9be9d3e9e2aa433a9302517a166f77dc517",
+  "report_sha256": "803dc85289c52aafa5b524350c43b96f7a1b1b754de25a0dc00cb1848d127bcc",
+  "run_bytes": 11120931,
+  "run_sha256": "47aa83bd91c98ef080400e790ad72213b09caad4c6829abadb2ab0b706298fc3",
+  "score_sha256": "719818be348ffeb5cb26bf014a841e3fedb08786529e95bda9eb915e05262a10"
+ },
+ "variant": "V1",
+ "verification": {
+  "equivalence_diffs_beyond_hash_fields": {
+   "first_public_to_published": 0,
+   "sealed_to_first_public": 0
+  },
+  "public_replay": "REPLAY env/ python3 -m headgasket replay exploratory-gpt-6-luna exit=0 exact=true wall=167s record_sha256=297d4d877ad0ec33fc37eaaafc767706d4a976ed1df2cf1dd4b789bdd728d257 config_pin=a4e22f01d85b799e0bb92b90c56d423e792a56b5134750c6aa4d4edf9b6e232e points=13",
+  "public_scorer": "scorer/hgj_scorer.py score (amendment-2-20261010) on the published re-derived run.json: points 13/18, S_partial 0.361111, primary comparison agreement, shared-field disagreements 0; points, checkpoint outcomes, productive/penalty seconds and mistake labels equal the sealed corrected-epoch independent result",
+  "sealed_replay": "REPLAY sealed exploratory-luna exit=0 output=IDENTICAL wall=118s record_sha256=47aa83bd91c98ef080400e790ad72213b09caad4c6829abadb2ab0b706298fc3 config_pin=e2b962f610544b320c40c08927da3c26743c9fb9c8a71bcd1c985a0b45b07984"
+ },
+ "withheld_files": {
+  "actions.jsonl": {
+   "bytes": 6157909,
+   "sha256": "dffa2cd6dcce5f64e755cf2ecaa81172b3953160abf0398753945f1fbb944022"
+  },
+  "independent-result-original-seal.json": {
+   "bytes": 74156,
+   "sha256": "dba07338998ce6c534a7faa69ffdd4247af347b5d7777bc9b45274bc7e2c13dc"
+  },
+  "independent-result.json": {
+   "bytes": 74252,
+   "sha256": "3341881f22757eab48b2d734268b2b1731372447e805fecac2ef3ca184bfe8aa"
+  },
+  "report.json": {
+   "bytes": 1393172,
+   "sha256": "258102e5b3e3893f0c63b8a2a89beb0b3d0d3905521d8ab20bfcf077c09bbcd7"
+  },
+  "run.json": {
+   "bytes": 10893050,
+   "sha256": "297d4d877ad0ec33fc37eaaafc767706d4a976ed1df2cf1dd4b789bdd728d257"
+  }
+ },
+ "withheld_note": "Agent traces stay private: the per-action journal (run.json, actions.jsonl), the per-action report (report.json) and the full independent results are not published. The hashes identify the public re-derived files that were replayed and scored before publication; the published summaries are environment-score.json and independent-score.json."
+}

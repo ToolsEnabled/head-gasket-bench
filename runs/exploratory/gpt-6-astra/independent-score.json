@@ -1,0 +1,296 @@
+{
+  "corrected_epoch": {
+    "S_full": 0,
+    "S_partial": 0.4166666666666667,
+    "checklist": {
+      "correct": 1555,
+      "total": 2759,
+      "unknown": 1204
+    },
+    "checkpoint_revision": "amendment-2-20261010",
+    "checkpoints": [
+      {
+        "id": "CP01",
+        "not_met": [],
+        "passed": true,
+        "title": "Torque values, stages and sequence looked up before tightening",
+        "weight": 1
+      },
+      {
+        "id": "CP02",
+        "not_met": [
+          "no_blocked_removal_attempt",
+          "no_refused_removal_attempt",
+          "source_policy_replay"
+        ],
+        "passed": false,
+        "title": "Valid disassembly with no blocked removal attempt",
+        "weight": 2
+      },
+      {
+        "id": "CP03",
+        "not_met": [],
+        "passed": true,
+        "title": "Cylinder 1 at TDC and timing marks aligned before belt removal",
+        "weight": 1
+      },
+      {
+        "id": "CP04",
+        "not_met": [
+          "order_and_increment"
+        ],
+        "passed": false,
+        "title": "Head bolts loosened in the specified order and stages",
+        "weight": 1
+      },
+      {
+        "id": "CP05",
+        "not_met": [],
+        "passed": true,
+        "title": "Head and old gasket removed and both surfaces cleaned",
+        "weight": 1
+      },
+      {
+        "id": "CP06",
+        "not_met": [],
+        "passed": true,
+        "title": "Head and block flatness measured with the correct service decision",
+        "weight": 1
+      },
+      {
+        "id": "CP07",
+        "not_met": [],
+        "passed": true,
+        "title": "Head bolts measured with the correct reuse decision",
+        "weight": 1
+      },
+      {
+        "id": "CP08",
+        "not_met": [],
+        "passed": true,
+        "title": "Correct new gasket and orientation on aligned dowels",
+        "weight": 2
+      },
+      {
+        "id": "CP09",
+        "not_met": [],
+        "passed": true,
+        "title": "Stage 1 torque correct on all ten bolts in sequence",
+        "weight": 2
+      },
+      {
+        "id": "CP10",
+        "not_met": [],
+        "passed": true,
+        "title": "Final torque correct on all ten bolts in sequence",
+        "weight": 2
+      },
+      {
+        "id": "CP11",
+        "not_met": [],
+        "passed": true,
+        "title": "Timing restored with fitted and tensioned belt",
+        "weight": 2
+      },
+      {
+        "id": "CP12",
+        "not_met": [],
+        "passed": true,
+        "title": "Reassembly complete with all required fasteners",
+        "weight": 2
+      }
+    ],
+    "exact_replay": true,
+    "failed_checkpoints": [
+      "CP02",
+      "CP04"
+    ],
+    "head_bolt_criteria": {
+      "correct": 60,
+      "total": 60,
+      "unknown": 0
+    },
+    "mistake_labels_by_type": {
+      "blocked_removal": 1,
+      "invalid_action": 14,
+      "redo_work": 15
+    },
+    "points_earned": 15,
+    "scored_record_sha256": "de05145dcd32de8cda6bf306a3f98881f8e4cc66a39d478071432362b7236b08",
+    "scorer_source_sha256": {
+      "__init__.py": "e834b9a331fcfa1f53151ffcf5dca9feec9f4df03423b1e2033698497f09b945",
+      "checkpoint_contracts.py": "7dc9585b6c3a16675b20372a14294391bca489f16af5e52e5171a5cac2267fb1",
+      "checkpoints.py": "d00072a59f50894f972b9d711f7e6eef38ab5ce760572a5d1d8f2e7a8758abb5",
+      "comparison.py": "93ad97b3313cf419dd8d382999953cfb725bb19706f90b16ec8e5174ad01a9f9",
+      "finish.py": "e2f15ac4e9d30477d1f3d43b0935ea9449713b263502cd7dca4f392380793dd4",
+      "independent.py": "308726d1ea7a6961bce37848ace8112ea701b2e2fa02c5cb2c43392a7bd5f512",
+      "inputs.py": "93a5903f86be8e48f78be4b15fa5db348fd96586dda8d115f617277bb0eebb13",
+      "refits.py": "b79ed4247d388536de57e9fe491ee2f1531fdf28fb4ef8aa109a62b4e8703f5b",
+      "removal.py": "5717705677a44c4239e8eee88fd2eb2397f183c3be98f958c231d468fc115ffd",
+      "report.py": "6c2ea1c8c70d469465ae94fbec59f5832e4ebd371808431e5db2b6ce7ee0f374",
+      "transport.py": "b2f8ae67179b79932c192a90bc449eb22a7899641213ebe9d17d782aa72f379f",
+      "usage.py": "1e6ececbc19f218fd54ecb6ca8c88163dff5cb2b6c1845d2d4aaade231995cba"
+    },
+    "source_removal": {
+      "invalid_attempt_count": 3,
+      "reassembly_complete": true,
+      "valid_disassembly": false
+    },
+    "status": "COMPLETE",
+    "technician_seconds": {
+      "penalty_seconds": 1404,
+      "productive_seconds": 16190,
+      "total_seconds": 17594
+    },
+    "terminal_reason": "model_turn_completed",
+    "total_points": 18
+  },
+  "original_seal": {
+    "S_full": 0,
+    "S_partial": 0.4166666666666667,
+    "checklist": {
+      "correct": 1555,
+      "total": 2759,
+      "unknown": 1204
+    },
+    "checkpoint_revision": "amendment-2-20261010",
+    "checkpoints": [
+      {
+        "id": "CP01",
+        "not_met": [],
+        "passed": true,
+        "title": "Torque values, stages and sequence looked up before tightening",
+        "weight": 1
+      },
+      {
+        "id": "CP02",
+        "not_met": [
+          "no_blocked_removal_attempt",
+          "no_refused_removal_attempt",
+          "source_policy_replay"
+        ],
+        "passed": false,
+        "title": "Valid disassembly with no blocked removal attempt",
+        "weight": 2
+      },
+      {
+        "id": "CP03",
+        "not_met": [],
+        "passed": true,
+        "title": "Cylinder 1 at TDC and timing marks aligned before belt removal",
+        "weight": 1
+      },
+      {
+        "id": "CP04",
+        "not_met": [
+          "order_and_increment"
+        ],
+        "passed": false,
+        "title": "Head bolts loosened in the specified order and stages",
+        "weight": 1
+      },
+      {
+        "id": "CP05",
+        "not_met": [],
+        "passed": true,
+        "title": "Head and old gasket removed and both surfaces cleaned",
+        "weight": 1
+      },
+      {
+        "id": "CP06",
+        "not_met": [],
+        "passed": true,
+        "title": "Head and block flatness measured with the correct service decision",
+        "weight": 1
+      },
+      {
+        "id": "CP07",
+        "not_met": [],
+        "passed": true,
+        "title": "Head bolts measured with the correct reuse decision",
+        "weight": 1
+      },
+      {
+        "id": "CP08",
+        "not_met": [],
+        "passed": true,
+        "title": "Correct new gasket and orientation on aligned dowels",
+        "weight": 2
+      },
+      {
+        "id": "CP09",
+        "not_met": [],
+        "passed": true,
+        "title": "Stage 1 torque correct on all ten bolts in sequence",
+        "weight": 2
+      },
+      {
+        "id": "CP10",
+        "not_met": [],
+        "passed": true,
+        "title": "Final torque correct on all ten bolts in sequence",
+        "weight": 2
+      },
+      {
+        "id": "CP11",
+        "not_met": [],
+        "passed": true,
+        "title": "Timing restored with fitted and tensioned belt",
+        "weight": 2
+      },
+      {
+        "id": "CP12",
+        "not_met": [],
+        "passed": true,
+        "title": "Reassembly complete with all required fasteners",
+        "weight": 2
+      }
+    ],
+    "exact_replay": true,
+    "failed_checkpoints": [
+      "CP02",
+      "CP04"
+    ],
+    "head_bolt_criteria": {
+      "correct": 60,
+      "total": 60,
+      "unknown": 0
+    },
+    "mistake_labels_by_type": {
+      "blocked_removal": 1,
+      "invalid_action": 14,
+      "redo_work": 15
+    },
+    "points_earned": 15,
+    "scored_record_sha256": "de05145dcd32de8cda6bf306a3f98881f8e4cc66a39d478071432362b7236b08",
+    "scorer_source_sha256": {
+      "__init__.py": "e834b9a331fcfa1f53151ffcf5dca9feec9f4df03423b1e2033698497f09b945",
+      "checkpoint_contracts.py": "7dc9585b6c3a16675b20372a14294391bca489f16af5e52e5171a5cac2267fb1",
+      "checkpoints.py": "d00072a59f50894f972b9d711f7e6eef38ab5ce760572a5d1d8f2e7a8758abb5",
+      "comparison.py": "93ad97b3313cf419dd8d382999953cfb725bb19706f90b16ec8e5174ad01a9f9",
+      "finish.py": "e2f15ac4e9d30477d1f3d43b0935ea9449713b263502cd7dca4f392380793dd4",
+      "independent.py": "b601349ed4111f1ca097954fc14a6cdb5bba5dc195ac95400ee44fcc10f5a587",
+      "inputs.py": "93a5903f86be8e48f78be4b15fa5db348fd96586dda8d115f617277bb0eebb13",
+      "removal.py": "5717705677a44c4239e8eee88fd2eb2397f183c3be98f958c231d468fc115ffd",
+      "report.py": "6c2ea1c8c70d469465ae94fbec59f5832e4ebd371808431e5db2b6ce7ee0f374",
+      "transport.py": "b2f8ae67179b79932c192a90bc449eb22a7899641213ebe9d17d782aa72f379f",
+      "usage.py": "1e6ececbc19f218fd54ecb6ca8c88163dff5cb2b6c1845d2d4aaade231995cba"
+    },
+    "source_removal": {
+      "invalid_attempt_count": 3,
+      "reassembly_complete": true,
+      "valid_disassembly": false
+    },
+    "status": "COMPLETE",
+    "technician_seconds": {
+      "penalty_seconds": 1404,
+      "productive_seconds": 16190,
+      "total_seconds": 17594
+    },
+    "terminal_reason": "turn_ended_after_finish",
+    "total_points": 18
+  },
+  "run": "gpt-6-astra",
+  "schema": "head-gasket-bench/independent-score-summary/v1",
+  "source": "independent scorer results over the sealed record (full results not published: they cite per-action evidence)"
+}

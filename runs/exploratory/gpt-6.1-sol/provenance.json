@@ -1,0 +1,116 @@
+{
+ "derivation": "Re-derived from the sealed action journal (every action name and input, in order) under the public configuration with the sealed runtime; identical to the sealed record except for the documented string substitutions and dropped citation-digest keys and the hash fields that depend on them (configuration pin, reference pins, state identity, per-action chain and state hashes, score and run hashes). Second public derivation (2026-10-14): the same journal replayed by the same runtime against the configuration the published environment generates, which recomputes three derived digests over the public inputs (the analyst time policy labor_content_sha256 and S7 labor_source_record_sha256, and the reassembly checklist source_raw_sha256) so that the independent scorer accepts the record; zero differences beyond hash fields.",
+ "epoch": {
+  "configuration_checkpoint_label": "amendment-1-20261009",
+  "configuration_sha256_public": "a4e22f01d85b799e0bb92b90c56d423e792a56b5134750c6aa4d4edf9b6e232e",
+  "configuration_sha256_sealed": "e2b962f610544b320c40c08927da3c26743c9fb9c8a71bcd1c985a0b45b07984",
+  "environment_source_identity_sha256": "28a625063ff51e7a4464191088a17afe0ce012070b68f679fe98c3e201b41d0a",
+  "independent_scorer_epoch_commit": "064d14af4f1f9819b76ae0ab4a9cff01efcf6983",
+  "runtime_commit": "24a57135fc5d86e70e668880d8119556a40a9611",
+  "scorer_checkpoint_revision": "amendment-2-20261010",
+  "source_manifest_sha256": "10967be0011b7c7808a47a108e74b1076f5141b10a5d5a7d39fa4d4087e8179b"
+ },
+ "first_public_derivation": {
+  "configuration_sha256": "67939d46db2ff59d051cb696ad454cd1274c360bcf8e910c543ecc72535b8e45",
+  "published": false,
+  "run_sha256": "467225b02e7dca639e1bdba2032972f7fcaae08c72d64a165d3a6d790b531882"
+ },
+ "independent": {
+  "corrected_epoch_result": {
+   "file": "independent-result.json",
+   "scored_record_sha256": "68cafb058c150977ff3e21a91f034d03b385148cba99b54399c370e4ab789c7d",
+   "scorer_commit": "064d14af4f1f9819b76ae0ab4a9cff01efcf6983",
+   "scorer_epoch": "amendment-2-20261010",
+   "sealed_in": "repair-corrected-scorer-epoch-v1 (inventory 3348ff7070059e739198622621f9d334f17b2e2842913ee2e1b8deea9a20e5b3)",
+   "sha256": "bcce8b2c7f560b19ae3d345c69dae9680dc42d59a7aefe93a5b3e09e4e092d5e"
+  },
+  "original_seal_result": {
+   "file": "independent-result-original-seal.json",
+   "scored_record_sha256": "68cafb058c150977ff3e21a91f034d03b385148cba99b54399c370e4ab789c7d",
+   "sealed_in": "repair-sol-v2-amendment2-v1 (inventory 2d64a5ae6d97e0c58874e1ff15efdcf9a1122d4473f99a69e024654b536018a5)",
+   "sha256": "ebe01183812a10d773bc053583ee30a84088acfdd6a3f155b07b267f0e6b3ca9"
+  }
+ },
+ "kind": "exploratory",
+ "public_score_sha256": "029fb0fe33a229d6b6be88949e89434e796e13baf7edbaca86d1c9845a84e0df",
+ "published_files": {
+  "environment-score.json": {
+   "bytes": 67798,
+   "sha256": "fc00b347df800162f6d6b42725e5c844ea9495d6db1e86888d815c90499a8f2e"
+  },
+  "independent-score.json": {
+   "bytes": 76326,
+   "sha256": "2c8e27ea01bc452ce6f83c1069b7ad1d0109f9a69b972b9c3386e8f23d5e15bc"
+  }
+ },
+ "result": {
+  "S_full": 0,
+  "S_partial": 0.08333333333333333,
+  "actions": 663,
+  "failed_checkpoints": [
+   "CP02",
+   "CP04",
+   "CP05",
+   "CP07",
+   "CP08",
+   "CP09",
+   "CP10",
+   "CP11",
+   "CP12"
+  ],
+  "finished": false,
+  "mistake_count": 245,
+  "mistakes": {
+   "blocked_removal": 3,
+   "invalid_action": 28,
+   "redo_work": 213,
+   "wrong_gasket": 2
+  },
+  "penalty_seconds": 12012,
+  "points": 3,
+  "productive_seconds": 13280,
+  "total_points": 18
+ },
+ "run": "gpt-6.1-sol",
+ "schema": "head-gasket-bench/run-provenance/v1",
+ "sealed_record": {
+  "actions_sha256": "270fdf4ef2304691442316db54c66206f0d8d393ae86943b5f9e40502d56b671",
+  "report_sha256": "27516a6f5a5d7db2a88bc95b87f979811bb671e68cc8797f5efaf2790d282bc4",
+  "run_bytes": 8176024,
+  "run_sha256": "68cafb058c150977ff3e21a91f034d03b385148cba99b54399c370e4ab789c7d",
+  "score_sha256": "6042c45b32d564786065aa134d6f323b31aa5505b7acd616b0c8b1424d595c1f"
+ },
+ "variant": "V1",
+ "verification": {
+  "equivalence_diffs_beyond_hash_fields": {
+   "first_public_to_published": 0,
+   "sealed_to_first_public": 0
+  },
+  "public_replay": "REPLAY env/ python3 -m headgasket replay exploratory-gpt-6.1-sol exit=0 exact=true wall=156s record_sha256=18c7137c1d0e8491188811f3d960d1fa8226e01ef4ada5102009bd88e8e60430 config_pin=a4e22f01d85b799e0bb92b90c56d423e792a56b5134750c6aa4d4edf9b6e232e points=3",
+  "public_scorer": "scorer/hgj_scorer.py score (amendment-2-20261010) on the published re-derived run.json: points 3/18, S_partial 0.083333, primary comparison agreement, shared-field disagreements 0; points, checkpoint outcomes, productive/penalty seconds and mistake labels equal the sealed corrected-epoch independent result",
+  "sealed_replay": "REPLAY sealed exploratory-sol exit=0 output=IDENTICAL wall=94s record_sha256=68cafb058c150977ff3e21a91f034d03b385148cba99b54399c370e4ab789c7d config_pin=e2b962f610544b320c40c08927da3c26743c9fb9c8a71bcd1c985a0b45b07984"
+ },
+ "withheld_files": {
+  "actions.jsonl": {
+   "bytes": 3486587,
+   "sha256": "6eb856d2031864d2c7611b2ac25ee9302d8dd00936d07b00aa1873b0ecf6d26d"
+  },
+  "independent-result-original-seal.json": {
+   "bytes": 93626,
+   "sha256": "ebe01183812a10d773bc053583ee30a84088acfdd6a3f155b07b267f0e6b3ca9"
+  },
+  "independent-result.json": {
+   "bytes": 93728,
+   "sha256": "bcce8b2c7f560b19ae3d345c69dae9680dc42d59a7aefe93a5b3e09e4e092d5e"
+  },
+  "report.json": {
+   "bytes": 1226160,
+   "sha256": "bc2545591ab821c05b86b4d030ba7fae6b7ab5ed2d76d23f87c93833bc7266c8"
+  },
+  "run.json": {
+   "bytes": 8049727,
+   "sha256": "18c7137c1d0e8491188811f3d960d1fa8226e01ef4ada5102009bd88e8e60430"
+  }
+ },
+ "withheld_note": "Agent traces stay private: the per-action journal (run.json, actions.jsonl), the per-action report (report.json) and the full independent results are not published. The hashes identify the public re-derived files that were replayed and scored before publication; the published summaries are environment-score.json and independent-score.json."
+}
