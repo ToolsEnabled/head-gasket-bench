@@ -1,0 +1,201 @@
+{
+  "actions": {
+    "check_timing": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 120,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "clean": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 120,
+      "source_ids": [
+        "S4",
+        "S7"
+      ]
+    },
+    "finish": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 120,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "inspect": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S3",
+        "S7"
+      ]
+    },
+    "install": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "look": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 10,
+      "source_ids": [
+        "S7"
+      ]
+    },
+    "machine_head": {
+      "qualification": "Analyst active bench-service estimate with configured provisional eligibility; no measured or published labor-time standard",
+      "rationale": "Twenty minutes of active prepared-bench resurfacing work is a planning allowance, not a measured shop rate. Service entry E06 supports conditional resurfacing consideration, not the duration. Eligibility, material removal and resulting flatness are explicitly configured benchmark values; head-height, cam-holder and full physical suitability remain separately unresolved. The allowance excludes queue, transport and unattended elapsed time. Every attempted request, including refusal, pays this base under the charging policy.",
+      "seconds": 1200,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "measure": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 60,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "parts_bin": {
+      "qualification": "Analyst stock-selection planning estimate; no published elapsed-time standard",
+      "rationale": "One enumeration/selection attempt in supplied stock, using the existing inspect/replace 30-second planning unit. Procedural citations support choosing a compatible new part, not this duration. Existing replace performs the transfer; no extra retrieval charge is added.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S6",
+        "S7"
+      ]
+    },
+    "prepare_condition": {
+      "qualification": "Analyst named-condition preparation planning estimate; provisional benchmark state, no physical credit",
+      "rationale": "One explicit attempt to prepare a named benchmark condition uses the existing remove/install 30-second planning unit. Procedural citations support preparation, not this duration. This is a uniform metadata-level allowance, not a measured duration for arbitrary draining, lifting or isolation work; the actual condition and evidence basis remain labelled.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "release_attachment": {
+      "qualification": "Analyst attachment-release planning estimate; provisional source-policy transition, no physical release credit",
+      "rationale": "One explicit source-defined attachment-release attempt uses the existing remove 30-second planning unit. Its named source precondition must be satisfied before the recorded state changes. The allowance estimates one represented operation, not a physical joint law or a published labor standard. Subsequent body removal is a separate charged attempt.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "remove": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "replace": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S6",
+        "S7"
+      ]
+    },
+    "restore_attachment": {
+      "qualification": "Analyst attachment-restoration planning estimate; provisional benchmark transition, no physical tightening credit",
+      "rationale": "One explicit attempt to restore a previously released attachment uses the existing install 30-second planning unit. Restoring a recorded state does not supply torque, seal, connection or physical fit specifications. Applicable source/service checks remain separate; body installation and applicable torque operations are separately charged.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "search_service_info": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S7"
+      ]
+    },
+    "set_timing": {
+      "qualification": "Analyst TDC/mark-setting planning estimate; no published elapsed-time standard",
+      "rationale": "One timing-setting attempt rotates/aligns the represented phases to the configured cylinder-one compression-TDC datum, using the existing check_timing 120-second planning unit. Service entry E10 supports setting/rechecking the marks, not this duration. Later check_timing is a separate verification action. The phase convention is a benchmark convention, not a physical engine simulation.",
+      "seconds": 120,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "tension_belt": {
+      "qualification": "Analyst belt-tensioning planning estimate; discrete benchmark status and no invented numeric tension",
+      "rationale": "One belt-tensioning attempt uses the existing check_timing 120-second planning unit. Service entry E10 supports the timing-restoration task, not the duration or a numeric tension. The environment records a labelled discrete tensioned state; this is not a physical belt-tension measurement.",
+      "seconds": 120,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "torque": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Per fastener application estimate, derived from the side review planning arithmetic. Tightening and loosening are charged per application; no whole-job flat-rate claim.",
+      "seconds": 12,
+      "source_ids": [
+        "S1",
+        "S2",
+        "S7"
+      ]
+    }
+  },
+  "historical_labor_file_sha256": "ab3c7ef375d762265d3f4c77b257c63113e6e0b51e1ea385baa949d8311d93d8",
+  "scope": "Prepared benchmark bench; every action attempt including environmental refusal is charged. Cited procedures support the task, not the analyst durations. Active service estimates exclude queue/transport/unattended elapsed time. Configured machining eligibility and discrete belt tension are provisional benchmark conditions, not physical repair admission. Wall time and tokens are separate.",
+  "source_identity_scope": "Neutral records retain historical labor source-record and optional document hashes. References, titles and source locators are not copied.",
+  "sources": {
+    "S1": {
+      "historical_labor_source_record_sha256": "a7c61f138a51e40977fde31334a5816135fafd60191b4b431668b0ff9d269a02",
+      "source_id": "S1"
+    },
+    "S2": {
+      "historical_labor_source_record_sha256": "e639c4cecdd2ce24e1fc260bb92b7af3d2b8bd0c8a30f2eb56760398efa91a09",
+      "source_id": "S2"
+    },
+    "S3": {
+      "historical_labor_source_record_sha256": "336f65a6d9c00f1f2890648b5e2459f803de2385d9c5f8f8711d686e3e1238a2",
+      "source_id": "S3"
+    },
+    "S4": {
+      "historical_labor_source_record_sha256": "836e40464b4efe551ef166caf27d8018b98e791a110dceb30344b98e7bc31074",
+      "source_id": "S4"
+    },
+    "S6": {
+      "historical_labor_source_record_sha256": "7184cb760b59f058b34a467d5c53ef41efaa448d6ef64cc9012472401ec30884",
+      "source_id": "S6"
+    },
+    "S7": {
+      "historical_labor_source_record_sha256": "44ea353dae134b044e41d96885e7d2ef59ea466818fa083f18281f693b9d05f0",
+      "source_id": "S7"
+    }
+  }
+}

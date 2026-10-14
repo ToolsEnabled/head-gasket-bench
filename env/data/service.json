@@ -1,0 +1,321 @@
+{
+  "entries": [
+    {
+      "body": "The cited below-38 C guidance belongs to its referenced timing-adjustment operation; it is not a blanket threshold for every head-service step. For this benchmark the engine is supplied cold, electrically isolated, coolant drained and supported on a service stand. Set and confirm cylinder 1 at compression TDC and the timing marks before the belt comes off. External components follow the delivered labelled removal policy.",
+      "id": "E01",
+      "qualification": "Operation-specific public service guidance and an explicit supplied benchmark setup; not a complete vehicle repair or physical withdrawal instruction.",
+      "source_ids": [
+        "S1",
+        "M",
+        "B1"
+      ],
+      "tags": [
+        "preparation",
+        "temperature",
+        "timing-position"
+      ],
+      "title": "Preparation and cold-engine condition"
+    },
+    {
+      "body": "The public manual's printed loosening diagram on page 6-30, mapped through the tightening-position labels on page 6-54, gives 10, 9, 8, 7, 6, 3, 4, 5, 2, 1. The commercial service article S1 describes exact reverse tightening order, 10 through 1. Amendment 1 accepts either documented sequence and discloses their disagreement. Loosen one-third turn per bolt per complete pass, repeating until released. The recorded exact-reverse reference remains valid. The initial engagement and number of scripted release passes are benchmark settings; each bolt must be disengaged before withdrawal.",
+      "id": "E02",
+      "qualification": "Two documented sequences are accepted by signed benchmark policy. Manual diagram mapping is reported in the supplied public correction review; runtime coordinates and mechanical engagement remain benchmark conventions.",
+      "source_ids": [
+        "M",
+        "S1",
+        "B1"
+      ],
+      "tags": [
+        "cylinder-head",
+        "removal",
+        "loosening-order"
+      ],
+      "title": "Cylinder-head bolt removal increments"
+    },
+    {
+      "body": "Tighten positions 1 through 10, completing a whole pass before the next stage. The selected fastener sheet and public manual page 6-54 were visually checked by the source reviewer. In the runtime diagram convention, with +Y toward the upper row and +X left to right, the upper row is 8, 6, 2, 4, 10 and the lower row is 9, 3, 1, 5, 7. This axis-to-diagram mapping is a benchmark coordinate convention; it does not independently verify numbering on physical hardware. E02 describes both accepted loosening orders.",
+      "id": "E03",
+      "qualification": "Public diagram values are reported as visually verified by the upstream reviewer; this proposal did not inspect figure pixels. Exact physical CAD application and runtime spatial axes are not factory-qualified.",
+      "source_ids": [
+        "M",
+        "S2",
+        "B1"
+      ],
+      "tags": [
+        "cylinder-head",
+        "layout",
+        "tightening-sequence"
+      ],
+      "title": "Head-bolt layout and tightening order"
+    },
+    {
+      "body": "For the selected source-family instruction, tighten all ten head bolts in sequence to 30 N m, then complete the final full pass in the same order at 73 N m. Oil the threads and washer bearing faces as directed. Do not finish both stages on one bolt before moving to the next. The selected manual page 6-54 and fastener instruction support 30/73 N m; S1 records 30/72 N m. Retain that discrepancy rather than substituting another family's torque/angle procedure.",
+      "id": "E04",
+      "qualification": "Selected public instruction and fastener-sheet values; the generic reconstructed benchmark is not a factory-qualified physical repair configuration.",
+      "source_ids": [
+        "M",
+        "S2",
+        "S1"
+      ],
+      "tags": [
+        "cylinder-head",
+        "torque",
+        "fasteners"
+      ],
+      "title": "Cylinder-head torque stages"
+    },
+    {
+      "body": "Use a new head gasket on assembly. General fastener guidance recommends new bolts, but the cited nominal 140 mm dimension is not a numeric reuse or extension limit. The selected two-stage instruction alone does not prove physical bolt reuse permission. No application-specific numeric reuse threshold is supplied by the reviewed public metadata; E12 separately states the benchmark extension decision. A serviceable original cover gasket may instead be inspected and refitted with the treatment in E11; Amendment 1 withdraws the earlier mandatory-new-cover benchmark rule.",
+      "id": "E05",
+      "qualification": "New head-gasket instruction is sourced. Bolt reuse remains separately qualified; cover reuse requires an explicit serviceability observation and treatment, not merely an initial fixture condition.",
+      "source_ids": [
+        "M",
+        "S5",
+        "S2",
+        "B1"
+      ],
+      "tags": [
+        "cylinder-head",
+        "stretch",
+        "reuse",
+        "qualification"
+      ],
+      "title": "Head-bolt stretch and reuse status"
+    },
+    {
+      "body": "Measure the head along its edges and in three directions across its center; measure the block along its edges and across its center. The public manual page 6-45 gives conditional 0.05 mm head resurfacing consideration and a maximum 0.20 mm material removal, subject to head-height and cam-holder-clearance conditions. Page 7-12 gives block standard warpage 0.07 mm and service limit 0.10 mm; S1 page 46 states a 0.079 mm standard. The benchmark deliberately uses a common head/block decision limit of 0.05 mm, with equality accepted and values above it requiring the configured decision. V3 permits labelled machining or a distinct replacement head. Configured machining eligibility, removed material, resulting flatness and roughness are provisional service results.",
+      "id": "E06",
+      "qualification": "Service measurement and limits are distinguished from the benchmark decision and equality convention. Head height, cam-holder clearance, complete sampling and machining physics are not simulated or independently verified here.",
+      "source_ids": [
+        "M",
+        "S1",
+        "B1"
+      ],
+      "tags": [
+        "inspection",
+        "measurement",
+        "flatness",
+        "machining"
+      ],
+      "title": "Head and block flatness limits"
+    },
+    {
+      "body": "Protect oil and coolant openings, use a plastic scraper at a low angle with appropriate cleaner, remove residue and leave clean, dry, low-lint faces. Avoid abrasive discs, pads, gouging and grinding. The cited guidance is general sealing-surface guidance; it does not establish an engine-specific solvent or a calibrated cleaning-damage magnitude. The runtime's residue, debris and damage changes are labelled benchmark state transitions.",
+      "id": "E07",
+      "qualification": "General public preparation guidance; solvent choice, compatibility and damage magnitude require applicable physical service information.",
+      "source_ids": [
+        "S4",
+        "B1"
+      ],
+      "tags": [
+        "cleaning",
+        "surface-preparation",
+        "MLS"
+      ],
+      "title": "Cleaning gasket sealing surfaces"
+    },
+    {
+      "body": "The generic MLS guidance states 50 RA or finer and dry installation. Keep the page's wording without assigning an unstated roughness unit. The runtime's authored 0.5 micrometre roughness is a separate benchmark value and is not derived by converting 50 RA. Use the selected fastener instruction for tightening.",
+      "id": "E08",
+      "qualification": "Generic product guidance; page roughness unit and part-specific face direction remain unresolved. Numeric benchmark roughness has its own stated basis.",
+      "source_ids": [
+        "S3",
+        "B1"
+      ],
+      "tags": [
+        "surface-finish",
+        "MLS",
+        "installation"
+      ],
+      "title": "Surface finish and dry MLS installation"
+    },
+    {
+      "body": "A related catalog example lists 75.5 mm bore, 0.030 inch compressed thickness and three-layer steel. It is not the selected benchmark stock definition. B01 defines the correct 75 mm / 0.762 mm MLS stock and the wrong 78 mm / 1.2 mm option. Align the selected gasket on the retained dowels and match the openings; the runtime's up orientation is a benchmark convention. Catalog Orientation: None does not establish reversibility or a physical face direction. Install the selected MLS head gasket dry, without extra sealant.",
+      "id": "E09",
+      "qualification": "Related catalog dimensions, selected benchmark stock and unresolved physical orientation are kept distinct; no catalog or CAD fit admission is inferred.",
+      "source_ids": [
+        "S6",
+        "S3",
+        "M",
+        "B1"
+      ],
+      "tags": [
+        "replacement",
+        "gasket",
+        "alignment",
+        "orientation"
+      ],
+      "title": "Replacement head-gasket fit and orientation"
+    },
+    {
+      "body": "Set cylinder 1 to compression TDC and verify the marks before belt removal. Align the crank tooth-side groove with the oil-pump pointer and the cam TDC mark with the rear-cover pointer, with the UP mark upward. For seating/recheck, the commercial S1 article page 20 says five to six counterclockwise turns; public manual page 6-63 says about four or six clockwise turns. The retained four-clockwise reference is a disclosed benchmark choice supported by M, not an established superiority claim. Manual page 6-58 tension adjustment is separately counterclockwise and includes adjuster release and a three-cam-tooth movement. Recheck alignment after belt fitting/tensioning. Zero phases, 0.1-degree tolerance, one-to-six input range and the cam/crank phase convention are software conventions. check_timing records a discrete observation and does not simulate actual rotation or quantitative tension.",
+      "id": "E10",
+      "qualification": "Conflicting seating instructions and distinct tension-adjustment direction are disclosed. Exact physical engine application, motion and numeric belt tension are outside this discrete procedure benchmark.",
+      "source_ids": [
+        "M",
+        "S1",
+        "B1"
+      ],
+      "tags": [
+        "timing",
+        "TDC",
+        "marks",
+        "belt"
+      ],
+      "title": "Timing reference marks and restoration"
+    },
+    {
+      "body": "Remove the head cover for head-bolt access. Public manual page 6-56 and S1 page 52 support final 10 N m for M6 x 1.0 cover fasteners. Page 6-55 step 12 and its application note, with S1 page 17, support inspecting the original cover gasket for damage, oiling the tube seals and applying sealant at the specified cam-holder corners. Amendment 1 accepts either a new cover gasket or the serviceable original explicitly inspected and refitted with that treatment. The recorded new-stock reference is valid but does not define exclusive acceptance. Five positions, reverse 120-degree removal passes, cover numbering and intermediate 3/6 N m stages remain explicit benchmark policies.",
+      "id": "E11",
+      "qualification": "Public cover torque and treatment are separated from authored cover layout/stages. Reuse needs actual saved inspection/treatment/refit witnesses in the benchmark, without claiming physical seal integrity.",
+      "source_ids": [
+        "M",
+        "S1",
+        "B1"
+      ],
+      "tags": [
+        "cover",
+        "removal",
+        "replacement",
+        "torque"
+      ],
+      "title": "Cylinder-head-cover removal and installation"
+    },
+    {
+      "body": "For the benchmark, replace a head bolt when measured permanent extension is strictly greater than 0.10 mm; equality does not require replacement under this policy. The threshold is a stated benchmark decision, not a verified factory numeric reuse limit. Replacement stock must have a distinct body ID and match the original service position. Procedure checkpoints and separate illustrative joint estimates replace the obsolete promise of constitutive validation before physical scoring. There is no soak, failure-time or full-engine scoring.",
+      "id": "E12",
+      "qualification": "Explicit benchmark threshold and identity rule; no real-engine reuse permission, physical calibration or failure-time claim.",
+      "source_ids": [
+        "B1"
+      ],
+      "tags": [
+        "bolt",
+        "stretch",
+        "reuse",
+        "replace"
+      ],
+      "title": "Game bolt condition convention"
+    }
+  ],
+  "runtime_engine": "generic 1.6 L inline-four",
+  "sources": {
+    "B1": {
+      "amendment_document_sha256": "7ecafcd35b6ac0240376fef9b93bb8c48c9f23a992e9d9ab7f9737eba12606bb",
+      "kind": "benchmark_policy",
+      "qualification": "Signed environment interpretation, stock choices and analyst benchmark conventions; not a factory application or measured labor standard. No full brief bytes included.",
+      "title": "Study design v2 and Amendment 1 benchmark policy"
+    },
+    "M": {
+      "document_sha256": null,
+      "kind": "public_manual_reproduction",
+      "locator_custody": {
+        "field": "sources.M",
+        "kind": "externally pinned public metadata",
+        "locator_not_copied": true
+      },
+      "qualification": "A printed service manual, not redistributed; locator and record digests withheld from the public record; upstream reviewed page values only; source PDF bytes were not obtained or authenticated by this proposal",
+      "source_record_encoding": "External table-data.sources.M JSON value, compact sorted JSON plus LF",
+      "title": "Public workshop manual, source M"
+    },
+    "S1": {
+      "kind": "commercial_service_article",
+      "locator_custody": {
+        "input_corpus_sha256": "889295ca98b41195b19d74926cea8d6d8b673879e97d090343ddf4b425fc5783",
+        "kind": "historical normalized citation metadata",
+        "original_locator_not_copied": true,
+        "source_id": "S1"
+      },
+      "proposal_input_record_sha256": "a06b597648a3e0048c284997206c89907cf6b8a6c877951b02ed614996b4a0ee",
+      "qualification": "Commercial service article; not manual-authored. Discrepancies with public source M remain explicit.",
+      "source_locator_sha256": "bebc19f6d0f44bbd61b3ec2d540f6c679e5210595ad8ae039a7084597fbdc12b",
+      "title": "Cylinder-head service instructions"
+    },
+    "S2": {
+      "kind": "fastener-manufacturer sheet on public supplier mirror",
+      "locator_custody": {
+        "input_corpus_sha256": "889295ca98b41195b19d74926cea8d6d8b673879e97d090343ddf4b425fc5783",
+        "kind": "historical normalized citation metadata",
+        "original_locator_not_copied": true,
+        "source_id": "S2"
+      },
+      "proposal_input_record_sha256": "60055385d920a7f5cb0f1c18b6ddb263d88d50cceb7a03aab322d66d945b2b84",
+      "source_locator_sha256": "d036c8f991f46a330206a3f6d9daa95444287a429517447537f40f400de18dfd",
+      "source_record_sha256": "a2ee524963c236eb95e266f785664c89807859ecb4774de347cfc4a68e94e9c7",
+      "title": "Fastener tightening instruction"
+    },
+    "S3": {
+      "kind": "gasket-manufacturer technical guidance",
+      "locator_custody": {
+        "input_corpus_sha256": "889295ca98b41195b19d74926cea8d6d8b673879e97d090343ddf4b425fc5783",
+        "kind": "historical normalized citation metadata",
+        "original_locator_not_copied": true,
+        "source_id": "S3"
+      },
+      "proposal_input_record_sha256": "ef24b97721c8245f318f504d66a1713a8134bb6ac795b9cc5abd838a718e515a",
+      "source_locator_sha256": "da9217adf71125f83b50283e085cb15edf80b96343915eec77c40903b8bcefc2",
+      "source_record_sha256": "0622a73b000dedd762ec7aad7fe54f2a9e99dc0dd2272825c9336c6811ba35b4",
+      "title": "MLS gasket installation and surface-finish guidance"
+    },
+    "S4": {
+      "kind": "gasket-manufacturer technical guidance",
+      "locator_custody": {
+        "input_corpus_sha256": "889295ca98b41195b19d74926cea8d6d8b673879e97d090343ddf4b425fc5783",
+        "kind": "historical normalized citation metadata",
+        "original_locator_not_copied": true,
+        "source_id": "S4"
+      },
+      "proposal_input_record_sha256": "0f38bfa7ea5909f9c3654619ac150d63b1eedb391eef0997712f593b41c6bbf6",
+      "source_locator_sha256": "a344043558cf0ff4628514c9ac3ca7ec604abba2eb264199111cd603a2e7573b",
+      "source_record_sha256": "919a4d0a98e0cabaaf8ad64c90970fde7b64a4b26cdcc5e57f251a1f6e55af5f",
+      "title": "Gasket surface preparation guidance"
+    },
+    "S5": {
+      "kind": "fastener-manufacturer guidance",
+      "locator_custody": {
+        "input_corpus_sha256": "889295ca98b41195b19d74926cea8d6d8b673879e97d090343ddf4b425fc5783",
+        "kind": "historical normalized citation metadata",
+        "original_locator_not_copied": true,
+        "source_id": "S5"
+      },
+      "proposal_input_record_sha256": "17c46fa60c6beb0f431541d7f79c15bcb52b51af9c4acfd5fab4dcb11f71bb32",
+      "source_locator_sha256": "fd4fa15b564c141e620a315636d34fad5da30b993eedc7546d10e03b73aef706",
+      "source_record_sha256": "bd8da5ee988a5a9de402d0311d575870c1065a4b8b0ff77ddcb3a587ccebf1b3",
+      "title": "General cylinder-head fastener reuse guidance"
+    },
+    "S6": {
+      "kind": "gasket-manufacturer catalog",
+      "locator_custody": {
+        "input_corpus_sha256": "889295ca98b41195b19d74926cea8d6d8b673879e97d090343ddf4b425fc5783",
+        "kind": "historical normalized citation metadata",
+        "original_locator_not_copied": true,
+        "source_id": "S6"
+      },
+      "proposal_input_record_sha256": "cb7af5d74b314d2518253a79f0fbac23413b555caba27e23edcaaf39a5ce65a5",
+      "source_locator_sha256": "e47bdd6d2b7355f09441c9349853f70f3e63817cb7ff2500ef621998ea99170a",
+      "source_record_sha256": "0e387fe366e19d56cd381b29006b1a5525689fe9971c8edabee431e9cddae6ca",
+      "title": "Replacement gasket product listing"
+    },
+    "S7": {
+      "kind": "historical_citation_metadata",
+      "locator_custody": {
+        "input_corpus_sha256": "889295ca98b41195b19d74926cea8d6d8b673879e97d090343ddf4b425fc5783",
+        "kind": "historical normalized citation metadata",
+        "original_locator_not_copied": true,
+        "source_id": "S7"
+      },
+      "qualification": "Historical citation digest withheld from the public record (a printed service manual and private citation records, not redistributed); not a public source for these corrections. No reference field or source bytes copied.",
+      "title": "Historical citation S7"
+    },
+    "S8": {
+      "kind": "historical_citation_metadata",
+      "locator_custody": {
+        "input_corpus_sha256": "889295ca98b41195b19d74926cea8d6d8b673879e97d090343ddf4b425fc5783",
+        "kind": "historical normalized citation metadata",
+        "original_locator_not_copied": true,
+        "source_id": "S8"
+      },
+      "qualification": "Historical citation digest withheld from the public record (a printed service manual and private citation records, not redistributed); not a public source for these corrections. No reference field or source bytes copied.",
+      "title": "Historical citation S8"
+    }
+  }
+}

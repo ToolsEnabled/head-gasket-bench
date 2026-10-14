@@ -1,0 +1,420 @@
+{
+  "actions": {
+    "check_timing": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 120,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "clean": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 120,
+      "source_ids": [
+        "S4",
+        "S7"
+      ]
+    },
+    "finish": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 120,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "inspect": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S3",
+        "S7"
+      ]
+    },
+    "install": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "look": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 10,
+      "source_ids": [
+        "S7"
+      ]
+    },
+    "machine_head": {
+      "qualification": "Analyst active bench-service estimate with configured provisional eligibility; no measured or published labor-time standard",
+      "rationale": "Twenty minutes of active prepared-bench resurfacing work is a planning allowance, not a measured shop rate. Service entry E06 supports conditional resurfacing consideration, not the duration. Eligibility, material removal and resulting flatness are explicitly configured benchmark values; head-height, cam-holder and full physical suitability remain separately unresolved. The allowance excludes queue, transport and unattended elapsed time. Every attempted request, including refusal, pays this base under the charging policy.",
+      "seconds": 1200,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "measure": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 60,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "parts_bin": {
+      "qualification": "Analyst stock-selection planning estimate; no published elapsed-time standard",
+      "rationale": "One enumeration/selection attempt in supplied stock, using the existing inspect/replace 30-second planning unit. Procedural citations support choosing a compatible new part, not this duration. Existing replace performs the transfer; no extra retrieval charge is added.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S6",
+        "S7"
+      ]
+    },
+    "prepare_condition": {
+      "qualification": "Analyst named-condition preparation planning estimate; provisional benchmark state, no physical credit",
+      "rationale": "One explicit attempt to prepare a named benchmark condition uses the existing remove/install 30-second planning unit. Procedural citations support preparation, not this duration. This is a uniform metadata-level allowance, not a measured duration for arbitrary draining, lifting or isolation work; the actual condition and evidence basis remain labelled.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "release_attachment": {
+      "qualification": "Analyst attachment-release planning estimate; provisional source-policy transition, no physical release credit",
+      "rationale": "One explicit source-defined attachment-release attempt uses the existing remove 30-second planning unit. Its named source precondition must be satisfied before the recorded state changes. The allowance estimates one represented operation, not a physical joint law or a published labor standard. Subsequent body removal is a separate charged attempt.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "remove": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "replace": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S6",
+        "S7"
+      ]
+    },
+    "restore_attachment": {
+      "qualification": "Analyst attachment-restoration planning estimate; provisional benchmark transition, no physical tightening credit",
+      "rationale": "One explicit attempt to restore a previously released attachment uses the existing install 30-second planning unit. Restoring a recorded state does not supply torque, seal, connection or physical fit specifications. Applicable source/service checks remain separate; body installation and applicable torque operations are separately charged.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "search_service_info": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Procedural sources support the operation, not the duration. One call handles one body or one instrument reading; estimates exclude supplied bench setup.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S7"
+      ]
+    },
+    "set_timing": {
+      "qualification": "Analyst TDC/mark-setting planning estimate; no published elapsed-time standard",
+      "rationale": "One timing-setting attempt rotates/aligns the represented phases to the configured cylinder-one compression-TDC datum, using the existing check_timing 120-second planning unit. Service entry E10 supports setting/rechecking the marks, not this duration. Later check_timing is a separate verification action. The phase convention is a benchmark convention, not a physical engine simulation.",
+      "seconds": 120,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "tension_belt": {
+      "qualification": "Analyst belt-tensioning planning estimate; discrete benchmark status and no invented numeric tension",
+      "rationale": "One belt-tensioning attempt uses the existing check_timing 120-second planning unit. Service entry E10 supports the timing-restoration task, not the duration or a numeric tension. The environment records a labelled discrete tensioned state; this is not a physical belt-tension measurement.",
+      "seconds": 120,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "torque": {
+      "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+      "rationale": "Analyst estimate for one fastener tightening or loosening application. Procedure citations support the operation, not elapsed time; this is not a measured whole-job flat-rate standard.",
+      "seconds": 12,
+      "source_ids": [
+        "S1",
+        "S2",
+        "S7"
+      ]
+    }
+  },
+  "aggregation": "maximum assessment estimate per action attempt; refused base included once",
+  "aliases": {
+    "invalid_argument": "invalid_action",
+    "skipped_final_stage": "missing_torque_stage",
+    "under_torque": "wrong_torque_value",
+    "wrong_installation": "redo_work",
+    "wrong_removal_order": "wrong_order",
+    "wrong_timing": "timing_marks_off",
+    "wrong_torque": "wrong_torque_value",
+    "wrong_torque_sequence": "wrong_order"
+  },
+  "base_classification": "successful correct work is productive; executed wrong work base is penalty",
+  "duration_evidence": "analyst-estimated",
+  "labor_content_sha256": "4601b60f51aabb7f483097039042e022295d2b6da3287d507c5a3c8bb413622a",
+  "mistake_epoch": "variant-restoration-v1",
+  "mistakes": {
+    "blocked_removal": {
+      "basis_action": "remove",
+      "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+      "rationale": "Analyst assessment/recheck allowance using one cited remove operation as a planning unit. Procedure citations establish the task, not elapsed time. Overlapping labels share one allowance; a later corrective action is charged separately when attempted.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "invalid_action": {
+      "basis_action": "look",
+      "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+      "rationale": "Analyst assessment/recheck allowance using one cited look operation as a planning unit. Procedure citations establish the task, not elapsed time. Overlapping labels share one allowance; a later corrective action is charged separately when attempted.",
+      "seconds": 10,
+      "source_ids": [
+        "S7"
+      ]
+    },
+    "missed_belt_tension": {
+      "basis_action": "check_timing",
+      "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+      "rationale": "Analyst assessment/recheck allowance using one cited check_timing operation as a planning unit. Procedure citations establish the task, not elapsed time. Overlapping labels share one allowance; a later corrective action is charged separately when attempted.",
+      "seconds": 120,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "missed_inspection": {
+      "basis_action": "inspect",
+      "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+      "rationale": "Analyst assessment/recheck allowance using one cited inspect operation as a planning unit. Procedure citations establish the task, not elapsed time. Overlapping labels share one allowance; a later corrective action is charged separately when attempted.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S3",
+        "S7"
+      ]
+    },
+    "missed_lookup": {
+      "basis_action": "search_service_info",
+      "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+      "rationale": "Analyst assessment/recheck allowance using one cited search_service_info operation as a planning unit. Procedure citations establish the task, not elapsed time. Overlapping labels share one allowance; a later corrective action is charged separately when attempted.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S7"
+      ]
+    },
+    "missed_measurement": {
+      "basis_action": "measure",
+      "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+      "rationale": "Analyst assessment/recheck allowance using one cited measure operation as a planning unit. Procedure citations establish the task, not elapsed time. Overlapping labels share one allowance; a later corrective action is charged separately when attempted.",
+      "seconds": 60,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "missing_attachment_restore": {
+      "basis_action": "restore_attachment",
+      "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+      "rationale": "Analyst assessment/recheck allowance using one cited restore_attachment operation as a planning unit. Procedure citations establish the task, not elapsed time. Overlapping labels share one allowance; a later corrective action is charged separately when attempted.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "missing_torque_stage": {
+      "basis_action": "torque",
+      "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+      "rationale": "Analyst assessment/recheck allowance using one cited torque operation as a planning unit. Procedure citations establish the task, not elapsed time. Overlapping labels share one allowance; a later corrective action is charged separately when attempted.",
+      "seconds": 12,
+      "source_ids": [
+        "S1",
+        "S2",
+        "S7"
+      ]
+    },
+    "redo_work": {
+      "basis_action": "inspect",
+      "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+      "rationale": "Analyst assessment/recheck allowance using one cited inspect operation as a planning unit. Procedure citations establish the task, not elapsed time. Overlapping labels share one allowance; a later corrective action is charged separately when attempted.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S3",
+        "S7"
+      ]
+    },
+    "reused_stretched_bolt": {
+      "basis_action": "replace",
+      "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+      "rationale": "Analyst assessment/recheck allowance using one cited replace operation as a planning unit. Procedure citations establish the task, not elapsed time. Overlapping labels share one allowance; a later corrective action is charged separately when attempted.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S6",
+        "S7"
+      ]
+    },
+    "timing_marks_off": {
+      "basis_action": "check_timing",
+      "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+      "rationale": "Analyst assessment/recheck allowance using one cited check_timing operation as a planning unit. Procedure citations establish the task, not elapsed time. Overlapping labels share one allowance; a later corrective action is charged separately when attempted.",
+      "seconds": 120,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "wrong_gasket": {
+      "basis_action": "replace",
+      "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+      "rationale": "Analyst assessment/recheck allowance using one cited replace operation as a planning unit. Procedure citations establish the task, not elapsed time. Overlapping labels share one allowance; a later corrective action is charged separately when attempted.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S6",
+        "S7"
+      ]
+    },
+    "wrong_order": {
+      "basis_action": "remove",
+      "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+      "rationale": "Analyst assessment/recheck allowance using one cited remove operation as a planning unit. Procedure citations establish the task, not elapsed time. Overlapping labels share one allowance; a later corrective action is charged separately when attempted.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "wrong_orientation": {
+      "basis_action": "install",
+      "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+      "rationale": "Analyst assessment/recheck allowance using one cited install operation as a planning unit. Procedure citations establish the task, not elapsed time. Overlapping labels share one allowance; a later corrective action is charged separately when attempted.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S7"
+      ]
+    },
+    "wrong_part": {
+      "basis_action": "replace",
+      "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+      "rationale": "Analyst assessment/recheck allowance using one cited replace operation as a planning unit. Procedure citations establish the task, not elapsed time. Overlapping labels share one allowance; a later corrective action is charged separately when attempted.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S6",
+        "S7"
+      ]
+    },
+    "wrong_service_decision": {
+      "basis_action": "inspect",
+      "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+      "rationale": "Analyst assessment/recheck allowance using one cited inspect operation as a planning unit. Procedure citations establish the task, not elapsed time. Overlapping labels share one allowance; a later corrective action is charged separately when attempted.",
+      "seconds": 30,
+      "source_ids": [
+        "S1",
+        "S3",
+        "S7"
+      ]
+    },
+    "wrong_torque_stage": {
+      "basis_action": "torque",
+      "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+      "rationale": "Analyst assessment/recheck allowance using one cited torque operation as a planning unit. Procedure citations establish the task, not elapsed time. Overlapping labels share one allowance; a later corrective action is charged separately when attempted.",
+      "seconds": 12,
+      "source_ids": [
+        "S1",
+        "S2",
+        "S7"
+      ]
+    },
+    "wrong_torque_value": {
+      "basis_action": "torque",
+      "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+      "rationale": "Analyst assessment/recheck allowance using one cited torque operation as a planning unit. Procedure citations establish the task, not elapsed time. Overlapping labels share one allowance; a later corrective action is charged separately when attempted.",
+      "seconds": 12,
+      "source_ids": [
+        "S1",
+        "S2",
+        "S7"
+      ]
+    }
+  },
+  "physical_acceptance": false,
+  "published_standard": false,
+  "qualification": "Cited analyst professional-task estimates; not measured technician time or a published labor-time standard.",
+  "schema": "hgj/human-time-policy/v1",
+  "scope": "Each action attempt is charged. Successful correct work is productive; successful executed wrong/rework base and every refused base are penalty time. Missing stage or missed lookup detected alone retains successful productive base. Same-attempt typed assessments share the maximum allowance, inclusive of refused base but separate from executed wrong work. Wall time is separate. Variant wrong-part and wrong-service decisions are executed wrong work; missed measurement, inspection or belt tension detected alone keeps a successful inspection/finish base productive. Variant machining is a configured provisional service estimate, not physical repair admission. Missing attachment restoration detected at finish retains its productive base; the cited restoration assessment shares the same-event maximum allowance.",
+  "sources": {
+    "S1": {
+      "labor_source_record_sha256": "5e78fadd448abeb95776dd69ab62a6de5625de3ca3e7bfe15002e230c6f51a67",
+      "source_id": "S1"
+    },
+    "S2": {
+      "labor_source_record_sha256": "a2ea9474f56ccb0a7632b9ccca22944140f102337ffc5ab9775ddd3c2d9964cb",
+      "source_id": "S2"
+    },
+    "S3": {
+      "labor_source_record_sha256": "b99fa49d070129a076348241dfa6993891567471b5ef631b728d995bb3f74b32",
+      "source_id": "S3"
+    },
+    "S4": {
+      "labor_source_record_sha256": "28ff81a573ea326965d4f0ed64de06d646c5e07f2a2e12e04fd26b275b352756",
+      "source_id": "S4"
+    },
+    "S6": {
+      "labor_source_record_sha256": "3b0efcf8e5664a6c1e0487b35fbdf9834e7a555bc0c923f455355462d64011d1",
+      "source_id": "S6"
+    },
+    "S7": {
+      "labor_source_record_sha256": "63ea1f8941ce9b87725b4e7988a385f7ff7ceadaf21b1dfe837e7c5cc48daf30",
+      "source_id": "S7"
+    }
+  },
+  "unit": "seconds",
+  "unknown_action": {
+    "qualification": "Analyst per-tool-operation estimate; no published elapsed-time standard",
+    "rationale": "Analyst allowance to assess an unsupported action request, using one cited look operation. This positive base prevents uncharged unknown attempts; it is not a measured or published technician-time standard.",
+    "seconds": 10,
+    "source_ids": [
+      "S7"
+    ]
+  }
+}

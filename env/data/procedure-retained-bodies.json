@@ -1,0 +1,273 @@
+{
+  "allowed_use": "Two exact separate body identities, poses and authored retained flags in presence checklist; no removal/install/support edge or physical fit/retention certification.",
+  "bounds": "Exactly two head_dowels rows selected by source withdrawal group, not all dowel-labelled engine parts. Full source has 1240 selected bodies and 23 IDs containing dowel.",
+  "parts": [
+    {
+      "CAD_sha256": "22727cbdb16b0d9dd103748dc308279017bb1bb82e329b8145abe0f4fa5b5bd8",
+      "actual_completed_receiver_count": 1239,
+      "additional_assembly_or_tool_mass": false,
+      "condition": null,
+      "declared_route_receiver_status": "COMPLETE_CONDITIONAL_RECEIVER_CENSUS_WITH_UNKNOWN",
+      "density_kg_m3": 7850.0,
+      "density_status": null,
+      "dimensions_estimated": null,
+      "dimensions_status": null,
+      "grade_status": null,
+      "id": "dowel_01",
+      "inertia": {
+        "com_m": [
+          3.629314771213515e-18,
+          4.0201136524773233e-19,
+          0.009999999999999998
+        ],
+        "frame": "part_local",
+        "matrix_kg_m2": [
+          [
+            5.548396493599567e-07,
+            -3.135051852141877e-23,
+            -5.890115062356932e-23
+          ],
+          [
+            -3.135051852141877e-23,
+            5.548396493599527e-07,
+            1.204709779212175e-24
+          ],
+          [
+            -5.890115062356932e-23,
+            1.204709779212175e-24,
+            4.0477135710130757e-07
+          ]
+        ],
+        "reference": "centre_of_mass",
+        "units": "kg*m^2"
+      },
+      "installed": true,
+      "kind": "dowel",
+      "mass_kg": 0.010573619124279003,
+      "material": null,
+      "material_id": "steel",
+      "material_membership_scope": "Source member metadata only; not added bodies or mass, independent mechanical separability unknown.",
+      "physical_admission": false,
+      "pose": {
+        "position_m": [
+          -0.168,
+          -0.052,
+          -0.01
+        ],
+        "quaternion_wxyz": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "precedence_reason": "Complete receiver enumeration includes UNKNOWN; native whole-bound accuracy, alternative paths, attachment and physical release remain unqualified",
+      "precedence_status": "unknown",
+      "registered_material_members": [],
+      "removable": false,
+      "removable_flag_meaning": "Candidate service scope from authored fixed flag; no executed removal permission",
+      "removal_permission": "UNKNOWN_NOT_AUTHORIZED",
+      "requires_installed": [],
+      "requires_removed": [],
+      "role": "dowel",
+      "selected_engine_body": true,
+      "source_id": "selected-registry:3d4d1beb043e8f7d2dbbfb40802b8d7353f79a58d91e489503f8a16ba446e04c",
+      "source_kind": "dowel",
+      "source_role": null,
+      "unknown_fields": [
+        "actual_starting_condition",
+        "alternative_route_necessity",
+        "condition",
+        "continuous_clearance_and_distance_error_bound",
+        "density_status",
+        "dimensions_estimated",
+        "dimensions_status",
+        "grade_status",
+        "independent_native_whole_bound_error",
+        "material",
+        "physical_or_thread_release",
+        "source_frame_and_attachment",
+        "whole_default9_material_identity"
+      ],
+      "unknown_receivers": [
+        "block_casting",
+        "bolt_09",
+        "coolant_bypass_outlet_hose",
+        "dipstick_blade_01",
+        "engine_harness",
+        "exhaust_04_rocker_B",
+        "gasket_old",
+        "head_casting",
+        "ignition_lead_01",
+        "ignition_lead_02",
+        "ignition_lead_03",
+        "ignition_lead_04",
+        "valve_cover",
+        "valve_cover_gasket_old",
+        "washer_09"
+      ],
+      "volume_m3": 1.3469578502266245e-06,
+      "withdrawal_path_sha256": "98e64c577f9b73c6fb62e173af3349cbb0da4d018e85da17c61d8f9fc2cd6b20"
+    },
+    {
+      "CAD_sha256": "22727cbdb16b0d9dd103748dc308279017bb1bb82e329b8145abe0f4fa5b5bd8",
+      "actual_completed_receiver_count": 1239,
+      "additional_assembly_or_tool_mass": false,
+      "condition": null,
+      "declared_route_receiver_status": "COMPLETE_CONDITIONAL_RECEIVER_CENSUS_WITH_UNKNOWN",
+      "density_kg_m3": 7850.0,
+      "density_status": null,
+      "dimensions_estimated": null,
+      "dimensions_status": null,
+      "grade_status": null,
+      "id": "dowel_02",
+      "inertia": {
+        "com_m": [
+          3.629314771213515e-18,
+          4.0201136524773233e-19,
+          0.009999999999999998
+        ],
+        "frame": "part_local",
+        "matrix_kg_m2": [
+          [
+            5.548396493599567e-07,
+            -3.135051852141877e-23,
+            -5.890115062356932e-23
+          ],
+          [
+            -3.135051852141877e-23,
+            5.548396493599527e-07,
+            1.204709779212175e-24
+          ],
+          [
+            -5.890115062356932e-23,
+            1.204709779212175e-24,
+            4.0477135710130757e-07
+          ]
+        ],
+        "reference": "centre_of_mass",
+        "units": "kg*m^2"
+      },
+      "installed": true,
+      "kind": "dowel",
+      "mass_kg": 0.010573619124279003,
+      "material": null,
+      "material_id": "steel",
+      "material_membership_scope": "Source member metadata only; not added bodies or mass, independent mechanical separability unknown.",
+      "physical_admission": false,
+      "pose": {
+        "position_m": [
+          0.168,
+          0.052,
+          -0.01
+        ],
+        "quaternion_wxyz": [
+          1,
+          0,
+          0,
+          0
+        ]
+      },
+      "precedence_reason": "Complete receiver enumeration includes UNKNOWN; native whole-bound accuracy, alternative paths, attachment and physical release remain unqualified",
+      "precedence_status": "unknown",
+      "registered_material_members": [],
+      "removable": false,
+      "removable_flag_meaning": "Candidate service scope from authored fixed flag; no executed removal permission",
+      "removal_permission": "UNKNOWN_NOT_AUTHORIZED",
+      "requires_installed": [],
+      "requires_removed": [],
+      "role": "dowel",
+      "selected_engine_body": true,
+      "source_id": "selected-registry:3d4d1beb043e8f7d2dbbfb40802b8d7353f79a58d91e489503f8a16ba446e04c",
+      "source_kind": "dowel",
+      "source_role": null,
+      "unknown_fields": [
+        "actual_starting_condition",
+        "alternative_route_necessity",
+        "condition",
+        "continuous_clearance_and_distance_error_bound",
+        "density_status",
+        "dimensions_estimated",
+        "dimensions_status",
+        "grade_status",
+        "independent_native_whole_bound_error",
+        "material",
+        "physical_or_thread_release",
+        "source_frame_and_attachment",
+        "whole_default9_material_identity"
+      ],
+      "unknown_receivers": [
+        "block_casting",
+        "bolt_10",
+        "engine_harness",
+        "gasket_old",
+        "head_casting",
+        "ps_drive_belt",
+        "timing_belt",
+        "timing_cover_lower",
+        "timing_lower_cover_seal"
+      ],
+      "volume_m3": 1.3469578502266245e-06,
+      "withdrawal_path_sha256": "22895d2e72457695221d9942ef37cee4c0dd51f42006f0e64aac6900adf3a8da"
+    }
+  ],
+  "qualification": "Selected public source metadata; physical condition and complete routes unknown.",
+  "schema": "hgj/procedure-retained-bodies/v1",
+  "source_inventory_sha256": "db26676bc5237998f044482ff90485b1275c6469c31f0968c5e9e0c1dd26f693",
+  "source_pins": {
+    "SHA256SUMS": {
+      "bytes": 918,
+      "sha256": "db26676bc5237998f044482ff90485b1275c6469c31f0968c5e9e0c1dd26f693"
+    },
+    "inventory.json": {
+      "bytes": 1004,
+      "sha256": "210f6eb3d02a10e2be5725522166b32d2c667b38b55007fc3ddbe44de1763a71"
+    },
+    "job-index.json": {
+      "bytes": 379460,
+      "sha256": "d23322fd08d57804cbb42795d9afd0911e5cd7441ab838a435548c4b3400b30f"
+    },
+    "manifest.json": {
+      "bytes": 3510,
+      "sha256": "8b9125bfdfdca3a2c6d7770272534f3857c0ce60cbaf33c340533ea5848e6cec"
+    },
+    "part-metadata.json": {
+      "bytes": 4712385,
+      "sha256": "475637264d317d8f69af61485e4236b2d4bab8db964d7083eee85601808a0c3a"
+    },
+    "removal-precedence.json": {
+      "bytes": 4147305,
+      "sha256": "48ebc7a7038e6d49d1fd255abd98b75187412095e52728a46bd79b9d2095dc7b"
+    }
+  },
+  "withdrawal_snippets": [
+    {
+      "attachment_and_carrier_qualification": "UNKNOWN_NOT_QUALIFIED",
+      "conditional_witness_refs": [],
+      "declared_moving_body_ids": [
+        "dowel_01"
+      ],
+      "group": "head_dowels",
+      "id": "dowel_01",
+      "qualified_requires_removed": null,
+      "removal_permission": "UNKNOWN_NOT_AUTHORIZED",
+      "source_declared_relationships": {
+        "fixed": true
+      }
+    },
+    {
+      "attachment_and_carrier_qualification": "UNKNOWN_NOT_QUALIFIED",
+      "conditional_witness_refs": [],
+      "declared_moving_body_ids": [
+        "dowel_02"
+      ],
+      "group": "head_dowels",
+      "id": "dowel_02",
+      "qualified_requires_removed": null,
+      "removal_permission": "UNKNOWN_NOT_AUTHORIZED",
+      "source_declared_relationships": {
+        "fixed": true
+      }
+    }
+  ]
+}
