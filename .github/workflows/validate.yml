@@ -33,6 +33,15 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
+          # A submission pull request may add or change only runs/submitted/<name>/ and the
+          # regenerated leaderboard/board.json. Anything else (tools, env, scorer) is a code
+          # change and goes through a normal review, not through this check.
+          outside=$(git diff --name-only "$BASE_SHA" HEAD | grep -v -e '^runs/submitted/' -e '^leaderboard/board\.json$' || true)
+          if [ -n "$outside" ]; then
+            echo "::error::A submission pull request may change only runs/submitted/<name>/ and leaderboard/board.json. Also changed:"
+            echo "$outside"
+            exit 1
+          fi
           git diff --name-only "$BASE_SHA" HEAD -- runs/submitted > changed.txt
           python3 - <<'PY'
           import json, os, re
@@ -67,8 +76,16 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.changed.outputs.matrix) }}
     steps:
+      # The validator, environment and scorer come from the base branch, never from the
+      # pull request; the pull request supplies only the submission folder (checked out
+      # under pr/ and read as data).
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          path: pr
           persist-credentials: false
       - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
@@ -76,7 +93,7 @@ jobs:
       - name: Validate runs/submitted/${{ matrix.name }}
         env:
           SUBMISSION: ${{ matrix.name }}
-        run: python3 -B tools/validate_submission.py "runs/submitted/$SUBMISSION"
+        run: python3 -B tools/validate_submission.py "pr/runs/submitted/$SUBMISSION"
 
   board:
     needs: changed
