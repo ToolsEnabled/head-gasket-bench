@@ -21,4 +21,19 @@ public re-derived record was replayed byte for byte with `env/` and rescored by
 the withheld `run.json`, `actions.jsonl` and `report.json` are in each
 `provenance.json` and `RESULT.md`.
 
+## Low-cost baseline: `claude-haiku-5-5` (three runs, 2026-10-14)
+
+`claude-haiku-5-5-r1` to `-r3` are three baseline runs by ToolsEnabled with a
+low-cost model through Claude Code, headless, with its built-in tools disabled
+so that only the 18 job tools were available, the task prompt from
+`env/README.md`, and `MAX_MCP_OUTPUT_TOKENS=150000` so that the result of `look`
+reached the model whole. All three scored 0/18 and ended their turn without
+calling `finish`, after 69, 19 and 15 of the 1,024 allowed tool calls. They ran
+on this release's `env/` (hardened runtime, the public V1 pin). Their folders
+have the same four files; `independent-score.json` holds one current scorer
+result instead of two epochs, and `provenance.json` records the client, its
+settings and the client-reported turns, wall time and API-equivalent cost.
+Before their journals were withheld, each record passed
+`tools/validate_submission.py` (exact replay and the independent scorer).
+
 ToolsEnabled is not affiliated with or endorsed by Anthropic, OpenAI or any other AI provider.

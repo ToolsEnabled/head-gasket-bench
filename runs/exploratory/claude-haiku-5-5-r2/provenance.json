@@ -1,0 +1,36 @@
+{
+  "client_reported": {
+    "api_equivalent_cost_usd": 0.006058340000000001,
+    "duration_ms": 33933,
+    "model_turns": 20,
+    "note": "as reported by the client at the end of the session; not a provider receipt",
+    "stop_reason": "end_turn"
+  },
+  "harness": {
+    "MAX_MCP_OUTPUT_TOKENS": 150000,
+    "built_in_tools": "disabled (--tools \"\")",
+    "client": "Claude Code 2.1.299",
+    "mode": "headless (claude -p), stream-json",
+    "model_requested": "claude-haiku-5-5",
+    "permission_mode": "dontAsk, allowed: the headgasket MCP server only",
+    "prompt": "the task prompt in env/README.md, verbatim",
+    "tools_available": 18
+  },
+  "kind": "baseline run by ToolsEnabled",
+  "published_files": [
+    "RESULT.md",
+    "environment-score.json",
+    "independent-score.json",
+    "provenance.json"
+  ],
+  "run": "claude-haiku-5-5-r2",
+  "schema": "head-gasket-bench/exploratory-provenance/v1",
+  "variant": "V1",
+  "verification": "before its files were withheld, the record passed tools/validate_submission.py (files, secrets, chain, pins, exact replay, independent scorer)",
+  "withheld_files": {
+    "actions.jsonl": "bd52a3e9e3cc9daed039a2afb20bef75c2ac4ca90ba0954476a9b1e1bfeae913",
+    "report.json": "228862435fc6c0183ab32fbd52669d21f9eb63dd09a496ea3790697950356ae8",
+    "run.json": "43f1507775ac78a01706f35af483982f8052effa569114cd27d213dc40b387eb"
+  },
+  "withheld_note": "The per-action journal and record of a model run are agent traces and are not published; their SHA-256 values are listed so a later release of the files can be checked against them."
+}

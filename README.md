@@ -46,6 +46,11 @@ scripted reference (from the paper's Table 1):
 | Codex CLI | GPT-6-Luna | 13 | 36.1% | 0% | 15,230 + 14,970 | 309 |
 | Codex CLI | GPT-6.1-Sol | 3 | 8.3% | 0% | 13,280 + 12,012 | 245 |
 
+A low-cost baseline, added in 0.1.1: three runs of `claude-haiku-5-5` through
+Claude Code (headless, only the 18 job tools) each scored 0/18 and ended without
+calling `finish`, after 69, 19 and 15 of the 1,024 allowed tool calls
+([runs/exploratory](runs/exploratory/README.md)).
+
 In the paper's own words: "Table 1 reports one exploratory run per model on the
 standard job (V1), with the scripted reference for comparison. No run achieved
 full completion." "With one run per model, these figures describe individual
