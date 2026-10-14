@@ -1,0 +1,27 @@
+Head Gasket Bench
+Copyright (c) 2026 ToolsEnabled, Inc.
+
+This repository contains:
+
+- Code and run data (env/, scorer/, tools/, runs/, leaderboard/, .github/),
+  licensed under the MIT License (LICENSE).
+- The report and its figures (paper/), BENCHMARK-CARD.md and
+  REPRODUCIBILITY.md, licensed under the Creative Commons Attribution 4.0
+  International License (paper/LICENSE).
+
+No third-party code is bundled; everything runs on the CPython standard
+library. The environment's service corpus paraphrases and cites public
+service and product guidance by source ID only; no source text, page image,
+PDF or URL is reproduced (env/THIRD-PARTY.md). Service-source material keeps
+the terms of its publishers.
+
+The engine is a real 1990s 1.6 L SOHC inline-four. The geometry, part
+identities and service positions are the benchmark's own labelled model of it;
+no manufacturer or model names are used.
+
+Model and client names appear only as labels for the runs and as examples of
+MCP client configuration; they belong to their owners. The model labels of the
+exploratory runs are the models the harness requested; served model identity
+was not attested.
+
+ToolsEnabled is not affiliated with or endorsed by Anthropic, OpenAI or any other AI provider.

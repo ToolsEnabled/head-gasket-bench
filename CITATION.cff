@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this benchmark, please cite it as below."
+title: "Head Gasket Bench: Evaluating AI Agents on a Head-Gasket Repair Procedure"
+type: software
+authors:
+  - family-names: Pinckard
+    given-names: Joshua
+  - name: "ToolsEnabled, Inc."
+version: 0.1.0
+date-released: "2026-10-14"
+repository-code: "https://github.com/ToolsEnabled/head-gasket-bench"
+url: "https://toolsenabled.ai/bench/"
+license: MIT
+keywords:
+  - benchmark
+  - AI agents
+  - MCP
+  - mechanical repair
