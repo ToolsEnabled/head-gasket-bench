@@ -45,6 +45,20 @@
       "exploratory": true
     },
     {
+      "name": "exploratory/claude-haiku-5-5-proxy-r1",
+      "model_label": "claude-haiku-5-5",
+      "client": "Claude Code",
+      "variant": "V1",
+      "points": 14,
+      "s_partial": 0.388889,
+      "s_full": 0,
+      "penalty_s": 3228,
+      "productive_s": 13952,
+      "date": "2026-10-14",
+      "source": "run by ToolsEnabled",
+      "exploratory": true
+    },
+    {
       "name": "exploratory/gpt-6-luna",
       "model_label": "GPT-6-Luna",
       "client": "Codex CLI",
@@ -59,6 +73,34 @@
       "exploratory": true
     },
     {
+      "name": "exploratory/claude-haiku-5-5-proxy-r2",
+      "model_label": "claude-haiku-5-5",
+      "client": "Claude Code",
+      "variant": "V1",
+      "points": 12,
+      "s_partial": 0.333333,
+      "s_full": 0,
+      "penalty_s": 4602,
+      "productive_s": 13976,
+      "date": "2026-10-14",
+      "source": "run by ToolsEnabled",
+      "exploratory": true
+    },
+    {
+      "name": "exploratory/claude-haiku-5-5-proxy-r3",
+      "model_label": "claude-haiku-5-5",
+      "client": "Claude Code",
+      "variant": "V1",
+      "points": 12,
+      "s_partial": 0.333333,
+      "s_full": 0,
+      "penalty_s": 3888,
+      "productive_s": 12956,
+      "date": "2026-10-14",
+      "source": "run by ToolsEnabled",
+      "exploratory": true
+    },
+    {
       "name": "exploratory/gpt-6.1-sol",
       "model_label": "GPT-6.1-Sol",
       "client": "Codex CLI",
@@ -69,48 +111,6 @@
       "penalty_s": 12012,
       "productive_s": 13280,
       "date": "2026-10-10",
-      "source": "run by ToolsEnabled",
-      "exploratory": true
-    },
-    {
-      "name": "exploratory/claude-haiku-5-5-r1",
-      "model_label": "claude-haiku-5-5",
-      "client": "Claude Code",
-      "variant": "V1",
-      "points": 0,
-      "s_partial": 0.0,
-      "s_full": 0,
-      "penalty_s": 978,
-      "productive_s": 1280,
-      "date": "2026-10-14",
-      "source": "run by ToolsEnabled",
-      "exploratory": true
-    },
-    {
-      "name": "exploratory/claude-haiku-5-5-r2",
-      "model_label": "claude-haiku-5-5",
-      "client": "Claude Code",
-      "variant": "V1",
-      "points": 0,
-      "s_partial": 0.0,
-      "s_full": 0,
-      "penalty_s": 360,
-      "productive_s": 440,
-      "date": "2026-10-14",
-      "source": "run by ToolsEnabled",
-      "exploratory": true
-    },
-    {
-      "name": "exploratory/claude-haiku-5-5-r3",
-      "model_label": "claude-haiku-5-5",
-      "client": "Claude Code",
-      "variant": "V1",
-      "points": 0,
-      "s_partial": 0.0,
-      "s_full": 0,
-      "penalty_s": 240,
-      "productive_s": 350,
-      "date": "2026-10-14",
       "source": "run by ToolsEnabled",
       "exploratory": true
     }

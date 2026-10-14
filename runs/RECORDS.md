@@ -14,7 +14,7 @@ runs/
   family/<case>/                  13 sealed scripted cases, hardened runtime aecadda
     run.json actions.jsonl report.json RESULT.md provenance.json
   exploratory/<model>/            3 exploratory model runs, amended runtime 24a5713, variant V1: scored results only
-  exploratory/claude-haiku-5-5-r*/ 3 low-cost baseline runs (2026-10-14), hardened runtime, variant V1: scored results only
+  exploratory/claude-haiku-5-5-proxy-r*/ 3 low-cost baseline runs (2026-10-14), hardened runtime, variant V1: scored results only
     RESULT.md environment-score.json independent-score.json provenance.json
   reference/V1-amended/           the scripted 18/18 V1 reference of the amended epoch (13,630 s)
     run.json actions.jsonl report.json RESULT.md provenance.json

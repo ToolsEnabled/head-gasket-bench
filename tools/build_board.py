@@ -26,10 +26,11 @@ EXPLORATORY = {
     'gpt-6.1-sol': {'model_label': 'GPT-6.1-Sol', 'client': 'Codex CLI', 'date': '2026-10-10'},
     'gpt-6-astra': {'model_label': 'GPT-6-Astra', 'client': 'Codex CLI', 'date': '2026-10-10'},
     'gpt-6-luna': {'model_label': 'GPT-6-Luna', 'client': 'Codex CLI', 'date': '2026-10-10'},
-    # Low-cost baseline, three runs, Claude Code headless with only the 18 job tools (see each RESULT.md).
-    'claude-haiku-5-5-r1': {'model_label': 'claude-haiku-5-5', 'client': 'Claude Code', 'date': '2026-10-14'},
-    'claude-haiku-5-5-r2': {'model_label': 'claude-haiku-5-5', 'client': 'Claude Code', 'date': '2026-10-14'},
-    'claude-haiku-5-5-r3': {'model_label': 'claude-haiku-5-5', 'client': 'Claude Code', 'date': '2026-10-14'},
+    # Low-cost baseline, three runs: Claude Code headless with only the 18 job tools, the server started through
+    # tools/claude-code-proxy.py so that look's result reaches the model inline (see each RESULT.md).
+    'claude-haiku-5-5-proxy-r1': {'model_label': 'claude-haiku-5-5', 'client': 'Claude Code', 'date': '2026-10-14'},
+    'claude-haiku-5-5-proxy-r2': {'model_label': 'claude-haiku-5-5', 'client': 'Claude Code', 'date': '2026-10-14'},
+    'claude-haiku-5-5-proxy-r3': {'model_label': 'claude-haiku-5-5', 'client': 'Claude Code', 'date': '2026-10-14'},
 }
 
 

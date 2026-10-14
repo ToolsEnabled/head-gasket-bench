@@ -1,19 +1,21 @@
 {
   "client_reported": {
-    "api_equivalent_cost_usd": 0.029357090000000002,
-    "duration_ms": 115535,
-    "model_turns": 70,
+    "api_equivalent_cost_usd": 1.6366775000000002,
+    "duration_ms": 626265,
+    "model_turns": 517,
     "note": "as reported by the client at the end of the session; not a provider receipt",
     "stop_reason": "end_turn"
   },
   "harness": {
     "MAX_MCP_OUTPUT_TOKENS": 150000,
     "built_in_tools": "disabled (--tools \"\")",
-    "client": "Claude Code 2.1.299",
+    "client": "Claude Code 2.1.300",
     "mode": "headless (claude -p), stream-json",
     "model_requested": "claude-haiku-5-5",
     "permission_mode": "dontAsk, allowed: the headgasket MCP server only",
     "prompt": "the task prompt in env/README.md, verbatim",
+    "proxy": "tools/claude-code-proxy.py: adds _meta anthropic/maxResultSizeChars 400000 to each tool in tools/list and passes every message through unchanged",
+    "tool_results_saved_to_file_by_client": 0,
     "tools_available": 18
   },
   "kind": "baseline run by ToolsEnabled",
@@ -23,14 +25,14 @@
     "independent-score.json",
     "provenance.json"
   ],
-  "run": "claude-haiku-5-5-r1",
+  "run": "claude-haiku-5-5-proxy-r1",
   "schema": "head-gasket-bench/exploratory-provenance/v1",
   "variant": "V1",
   "verification": "before its files were withheld, the record passed tools/validate_submission.py (files, secrets, chain, pins, exact replay, independent scorer)",
   "withheld_files": {
-    "actions.jsonl": "b85e2480e7fdf2eaf0cd9b2e63cf10fd7f022863f5ddd7ecee029b0af9412648",
-    "report.json": "1a171153959debc796c63949ff6ae8e88a5de08b7c9bc4281f66e541900ea9b6",
-    "run.json": "697479d07d0590f288d4d1d8ce6d08ed4ae95edff49489c20a412bab5e6222e8"
+    "actions.jsonl": "445af56f40b1c59de213ccc9c277d39fae0ad1e2ee959d92b9d0586f06d104b2",
+    "report.json": "dc62ddbaee469c1363e2302dea4eb669f9e3c5d07c5e07a71fd06bdf4ccabf9a",
+    "run.json": "5dca4387dcbdc287ae9e44dc699f2e5effdf6df7e64aa9a30837fa2135599b45"
   },
   "withheld_note": "The per-action journal and record of a model run are agent traces and are not published; their SHA-256 values are listed so a later release of the files can be checked against them."
 }

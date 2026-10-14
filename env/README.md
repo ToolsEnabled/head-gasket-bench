@@ -107,7 +107,8 @@ wiring, not a recommendation of any client or model.
 **Claude Code**
 
 ```sh
-claude mcp add headgasket -- python3 /ABS/PATH/env/bin/headgasket-mcp serve --variant V1 --out /ABS/PATH/runs/v1-first-try
+claude mcp add headgasket -- python3 /ABS/PATH/tools/claude-code-proxy.py python3 /ABS/PATH/env/bin/headgasket-mcp serve --variant V1 --out /ABS/PATH/runs/v1-first-try
+MAX_MCP_OUTPUT_TOKENS=150000 claude
 ```
 
 or in a project `.mcp.json`:
@@ -117,7 +118,8 @@ or in a project `.mcp.json`:
   "mcpServers": {
     "headgasket": {
       "command": "python3",
-      "args": ["/ABS/PATH/env/bin/headgasket-mcp", "serve", "--variant", "V1",
+      "args": ["/ABS/PATH/tools/claude-code-proxy.py", "python3",
+               "/ABS/PATH/env/bin/headgasket-mcp", "serve", "--variant", "V1",
                "--out", "/ABS/PATH/runs/v1-first-try"]
     }
   }
@@ -156,12 +158,16 @@ Requests are limited to 64 KiB per line.
 
 **Large tool results**
 
-`look` returns about 196,000 characters (every part on the engine). Some
-clients cut long tool results: Claude Code cuts an MCP result above
-`MAX_MCP_OUTPUT_TOKENS` tokens (25,000 by default) and saves it to a file,
-which an agent limited to the job tools cannot read. Start it with a higher
-limit, for example `MAX_MCP_OUTPUT_TOKENS=150000 claude`, and check your
-client's limit before a run.
+`look` returns about 200,000 characters (every part on the engine). Claude
+Code saves an MCP result to a file and shows the model only a short preview
+when the result is larger than the size the tool declares, and it cuts results
+above `MAX_MCP_OUTPUT_TOKENS` (25,000 tokens by default). An agent limited to
+the job tools then never sees the part list. So for Claude Code, start the
+server through `../tools/claude-code-proxy.py` as shown above: it adds the size
+declaration (`_meta` `anthropic/maxResultSizeChars`) to each tool and passes
+every message through unchanged, and the environment still writes its own
+record. Start Claude Code with `MAX_MCP_OUTPUT_TOKENS=150000`. Other clients may
+cut long results too; check yours before a run.
 
 **The task prompt**
 

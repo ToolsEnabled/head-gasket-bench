@@ -31,8 +31,8 @@ class BuildBoardTests(unittest.TestCase):
         rows = {r['name']: r for r in board['rows']}
         self.assertEqual(set(rows), {'reference/V1-amended', 'exploratory/gpt-6.1-sol',
                                      'exploratory/gpt-6-astra', 'exploratory/gpt-6-luna',
-                                     'exploratory/claude-haiku-5-5-r1', 'exploratory/claude-haiku-5-5-r2',
-                                     'exploratory/claude-haiku-5-5-r3'})
+                                     'exploratory/claude-haiku-5-5-proxy-r1', 'exploratory/claude-haiku-5-5-proxy-r2',
+                                     'exploratory/claude-haiku-5-5-proxy-r3'})
         for r in rows.values():
             self.assertEqual(tuple(r), build_board.FIELDS)
             self.assertTrue(r['exploratory'])
@@ -43,13 +43,14 @@ class BuildBoardTests(unittest.TestCase):
                     'exploratory/gpt-6-astra': (15, 0.416667, 0, 1404, 16190),
                     'exploratory/gpt-6-luna': (13, 0.361111, 0, 14970, 15230),
                     'exploratory/gpt-6.1-sol': (3, 0.083333, 0, 12012, 13280),
-                    'exploratory/claude-haiku-5-5-r1': (0, 0.0, 0, 978, 1280)}
+                    'exploratory/claude-haiku-5-5-proxy-r1': (14, 0.388889, 0, 3228, 13952)}
         for name, values in expected.items():
             r = rows[name]
             self.assertEqual((r['points'], r['s_partial'], r['s_full'], r['penalty_s'], r['productive_s']), values)
         self.assertEqual([r['name'] for r in board['rows']],
-                         ['reference/V1-amended', 'exploratory/gpt-6-astra', 'exploratory/gpt-6-luna', 'exploratory/gpt-6.1-sol',
-                          'exploratory/claude-haiku-5-5-r1', 'exploratory/claude-haiku-5-5-r2', 'exploratory/claude-haiku-5-5-r3'])
+                         ['reference/V1-amended', 'exploratory/gpt-6-astra', 'exploratory/claude-haiku-5-5-proxy-r1',
+                          'exploratory/gpt-6-luna', 'exploratory/claude-haiku-5-5-proxy-r2', 'exploratory/claude-haiku-5-5-proxy-r3',
+                          'exploratory/gpt-6.1-sol'])
 
     def test_submissions_sorted_by_variant_then_score_and_deterministic(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -70,11 +71,10 @@ class BuildBoardTests(unittest.TestCase):
             rows = json.loads(first)['rows']
             order = [(r['variant'], r['name']) for r in rows]
             self.assertEqual(order, [('V1', 'reference/V1-amended'), ('V1', 'submitted/c-run'),
-                                     ('V1', 'exploratory/gpt-6-astra'), ('V1', 'exploratory/gpt-6-luna'),
-                                     ('V1', 'exploratory/gpt-6.1-sol'), ('V1', 'exploratory/claude-haiku-5-5-r1'),
-                                     ('V1', 'exploratory/claude-haiku-5-5-r2'), ('V1', 'exploratory/claude-haiku-5-5-r3'),
-                                     ('V2', 'submitted/a-run'),
-                                     ('V2', 'submitted/b-run'), ('V3', 'submitted/d-run')])
+                                     ('V1', 'exploratory/gpt-6-astra'), ('V1', 'exploratory/claude-haiku-5-5-proxy-r1'),
+                                     ('V1', 'exploratory/gpt-6-luna'), ('V1', 'exploratory/claude-haiku-5-5-proxy-r2'),
+                                     ('V1', 'exploratory/claude-haiku-5-5-proxy-r3'), ('V1', 'exploratory/gpt-6.1-sol'),
+                                     ('V2', 'submitted/a-run'), ('V2', 'submitted/b-run'), ('V3', 'submitted/d-run')])
             submitted = [r for r in rows if r['name'].startswith('submitted/')]
             self.assertTrue(all(r['exploratory'] is False and r['source'] == 'submitted by tester' for r in submitted))
             out = Path(tmp) / 'board.json'

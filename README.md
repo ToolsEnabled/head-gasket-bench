@@ -46,10 +46,12 @@ scripted reference (from the paper's Table 1):
 | Codex CLI | GPT-6-Luna | 13 | 36.1% | 0% | 15,230 + 14,970 | 309 |
 | Codex CLI | GPT-6.1-Sol | 3 | 8.3% | 0% | 13,280 + 12,012 | 245 |
 
-A low-cost baseline, added in 0.1.1: three runs of `claude-haiku-5-5` through
-Claude Code (headless, only the 18 job tools) each scored 0/18 and ended without
-calling `finish`, after 69, 19 and 15 of the 1,024 allowed tool calls
-([runs/exploratory](runs/exploratory/README.md)).
+A low-cost baseline: three runs of `claude-haiku-5-5` through Claude Code
+(headless, only the 18 job tools, the server started through
+`tools/claude-code-proxy.py`) finished with 14, 12 and 12 of 18 points
+([runs/exploratory](runs/exploratory/README.md)). Release 0.1.1 had listed three
+0/18 runs instead; Claude Code had hidden most of `look`'s result from them, so
+they were withdrawn.
 
 In the paper's own words: "Table 1 reports one exploratory run per model on the
 standard job (V1), with the scripted reference for comparison. No run achieved
@@ -82,7 +84,8 @@ or model):
 Claude Code
 
 ```sh
-claude mcp add headgasket -- python3 /ABS/PATH/env/bin/headgasket-mcp serve --variant V1 --out /ABS/PATH/runs/v1-first-try
+claude mcp add headgasket -- python3 /ABS/PATH/tools/claude-code-proxy.py python3 /ABS/PATH/env/bin/headgasket-mcp serve --variant V1 --out /ABS/PATH/runs/v1-first-try
+MAX_MCP_OUTPUT_TOKENS=150000 claude
 ```
 
 or in a project `.mcp.json`:
@@ -92,7 +95,8 @@ or in a project `.mcp.json`:
   "mcpServers": {
     "headgasket": {
       "command": "python3",
-      "args": ["/ABS/PATH/env/bin/headgasket-mcp", "serve", "--variant", "V1",
+      "args": ["/ABS/PATH/tools/claude-code-proxy.py", "python3",
+               "/ABS/PATH/env/bin/headgasket-mcp", "serve", "--variant", "V1",
                "--out", "/ABS/PATH/runs/v1-first-try"]
     }
   }
@@ -113,12 +117,16 @@ tool_timeout_sec = 600
 Any other stdio MCP client: start the same command and exchange one JSON-RPC
 object per line (protocol version `2025-11-25`); see [env/README.md](env/README.md).
 
-**Large tool results.** `look` returns about 196,000 characters (every part on
-the engine). Some clients cut long tool results: Claude Code cuts an MCP result
-above `MAX_MCP_OUTPUT_TOKENS` tokens (25,000 by default) and saves it to a
-file, which an agent limited to the job tools cannot read. Start it with a
-higher limit, for example `MAX_MCP_OUTPUT_TOKENS=150000 claude`, and check
-your client's limit before a run.
+**Large tool results.** `look` returns about 200,000 characters (every part on the engine). Claude
+Code saves an MCP result to a file and shows the model only a short preview
+when the result is larger than the size the tool declares, and it cuts results
+above `MAX_MCP_OUTPUT_TOKENS` (25,000 tokens by default). An agent limited to
+the job tools then never sees the part list. So for Claude Code, start the
+server through `tools/claude-code-proxy.py` as shown above: it adds the size
+declaration (`_meta` `anthropic/maxResultSizeChars`) to each tool and passes
+every message through unchanged, and the environment still writes its own
+record. Start Claude Code with `MAX_MCP_OUTPUT_TOKENS=150000`. Other clients may
+cut long results too; check yours before a run.
 
 **Run.** Give the agent the task prompt from [env/README.md](env/README.md#run-it-with-an-mcp-client)
 (or your own, and record it) and let it work until it calls `finish` or the
