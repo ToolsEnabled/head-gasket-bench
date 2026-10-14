@@ -154,6 +154,15 @@ Each `tools/call` reply is `{"content":[{"type":"text","text":"<JSON>"}],"isErro
 the text is the tool result, `ok` plus the observation or the refusal.
 Requests are limited to 64 KiB per line.
 
+**Large tool results**
+
+`look` returns about 196,000 characters (every part on the engine). Some
+clients cut long tool results: Claude Code cuts an MCP result above
+`MAX_MCP_OUTPUT_TOKENS` tokens (25,000 by default) and saves it to a file,
+which an agent limited to the job tools cannot read. Start it with a higher
+limit, for example `MAX_MCP_OUTPUT_TOKENS=150000 claude`, and check your
+client's limit before a run.
+
 **The task prompt**
 
 The environment carries no prompt; the client supplies one. The text used for

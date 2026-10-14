@@ -108,6 +108,13 @@ tool_timeout_sec = 600
 Any other stdio MCP client: start the same command and exchange one JSON-RPC
 object per line (protocol version `2025-11-25`); see [env/README.md](env/README.md).
 
+**Large tool results.** `look` returns about 196,000 characters (every part on
+the engine). Some clients cut long tool results: Claude Code cuts an MCP result
+above `MAX_MCP_OUTPUT_TOKENS` tokens (25,000 by default) and saves it to a
+file, which an agent limited to the job tools cannot read. Start it with a
+higher limit, for example `MAX_MCP_OUTPUT_TOKENS=150000 claude`, and check
+your client's limit before a run.
+
 **Run.** Give the agent the task prompt from [env/README.md](env/README.md#run-it-with-an-mcp-client)
 (or your own, and record it) and let it work until it calls `finish` or the
 1,024-attempt budget runs out.
