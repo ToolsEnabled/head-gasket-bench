@@ -25,10 +25,11 @@ class BuildBoardTests(unittest.TestCase):
                               cwd=REPO, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
 
-    def test_rows_from_the_repository_runs(self):
-        board = json.loads(build_board.build(REPO / 'runs'))
+    def check_toolsenabled_rows(self, board):
+        """The rows of the runs made by ToolsEnabled, whatever submissions the board also holds."""
         self.assertEqual(board['fields'], list(build_board.FIELDS))
-        rows = {r['name']: r for r in board['rows']}
+        ours = [r for r in board['rows'] if not r['name'].startswith('submitted/')]
+        rows = {r['name']: r for r in ours}
         self.assertEqual(set(rows), {'reference/V1-amended', 'exploratory/gpt-6.1-sol',
                                      'exploratory/gpt-6-astra', 'exploratory/gpt-6-luna',
                                      'exploratory/claude-haiku-5-5-proxy-r1', 'exploratory/claude-haiku-5-5-proxy-r2',
@@ -47,10 +48,34 @@ class BuildBoardTests(unittest.TestCase):
         for name, values in expected.items():
             r = rows[name]
             self.assertEqual((r['points'], r['s_partial'], r['s_full'], r['penalty_s'], r['productive_s']), values)
-        self.assertEqual([r['name'] for r in board['rows']],
+        self.assertEqual([r['name'] for r in ours],
                          ['reference/V1-amended', 'exploratory/gpt-6-astra', 'exploratory/claude-haiku-5-5-proxy-r1',
                           'exploratory/gpt-6-luna', 'exploratory/claude-haiku-5-5-proxy-r2', 'exploratory/claude-haiku-5-5-proxy-r3',
                           'exploratory/gpt-6.1-sol'])
+        # Accepted submissions, if any, are listed as submitted runs.
+        for r in board['rows']:
+            if r['name'].startswith('submitted/'):
+                self.assertIs(r['exploratory'], False)
+                self.assertTrue(r['source'].startswith('submitted by '))
+
+    def test_rows_from_the_repository_runs(self):
+        self.check_toolsenabled_rows(json.loads(build_board.build(REPO / 'runs')))
+
+    def test_an_accepted_submission_does_not_break_the_repository_test(self):
+        # verification of F17 (side note): the push-time tests listed exactly the seven
+        # ToolsEnabled rows, so the first merged submission would have turned them red.
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / 'runs'
+            for part in ('reference', 'exploratory'):
+                shutil.copytree(REPO / 'runs' / part, runs / part, ignore=shutil.ignore_patterns('actions.jsonl', 'report.json'))
+            folder = runs / 'submitted' / '2026-10-14-alice-finish-only-v1'
+            folder.mkdir(parents=True)
+            (folder / 'run.json').write_text(json.dumps(fake_record('V1', 16, 0, 15000, 60)))
+            (folder / 'SUBMISSION.json').write_text(json.dumps(
+                {'model_label': 'model-a', 'client': 'client-a', 'variant': 'V1', 'date': '2026-10-14', 'submitter': 'alice'}))
+            board = json.loads(build_board.build(runs))
+            self.assertIn('submitted/2026-10-14-alice-finish-only-v1', [r['name'] for r in board['rows']])
+            self.check_toolsenabled_rows(board)
 
     def test_submissions_sorted_by_variant_then_score_and_deterministic(self):
         with tempfile.TemporaryDirectory() as tmp:

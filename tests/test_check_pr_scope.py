@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -130,6 +131,120 @@ class ScopeTests(unittest.TestCase):
         git(self.repo, 'rm', '-q', '-r', 'runs/submitted/2026-11-01-existing-v1')
         self.assert_refused('removes a file of a submission')
 
+    def test_a_code_change_is_not_a_submission(self):
+        write(self.repo, 'tools/build_board.py', 'print(2)\n')
+        write(self.repo, 'docs/notes.md', 'notes\n')
+        code, stdout, output = self.check()
+        self.assertEqual(code, 0, stdout)
+        self.assertIn('Not a submission pull request', stdout)
+        self.assertIn('kind=code', output)
+        self.assertIn('any=false', output)
+
+    def test_many_other_files_do_not_hide_a_submission(self):
+        # verification of the paths filter: GitHub matched it against only the first
+        # 3,000 changed files. The check now runs on every pull request and reads every path.
+        for index in range(40):
+            write(self.repo, f'docs/f{index:04d}.md', 'x\n')
+        self.add_submission('2026-11-02-forged-v1')
+        write(self.repo, 'leaderboard/board.json', '{"rows": "hand-made"}\n')
+        self.assert_refused("'docs/f0000.md': outside")
+
+    def test_at_most_ten_submissions_per_pull_request(self):
+        for index in range(11):
+            self.add_submission(f'2026-11-02-model-x-v1-r{index:02d}')
+        self.assert_refused('at most 10 per pull request')
+
+    def test_ten_submissions_are_listed(self):
+        for index in range(10):
+            self.add_submission(f'2026-11-02-model-x-v1-r{index:02d}')
+        code, stdout, output = self.check()
+        self.assertEqual(code, 0, stdout)
+        self.assertEqual(len(json.loads(re.search(r'^matrix=(.*)$', output, re.M).group(1))['include']), 10)
+
+    def test_a_pull_request_behind_main_is_checked_against_the_merge_result(self):
+        # main moved on (an unrelated change) after the pull request branched: only the
+        # pull request's own change is in the merge result.
+        self.add_submission('2026-11-02-model-x-v1')
+        write(self.repo, 'leaderboard/board.json', '{"rows": 1}\n')
+        git(self.repo, 'add', '-A')
+        git(self.repo, 'commit', '-q', '-m', 'pr')
+        git(self.repo, 'checkout', '-q', 'main')
+        write(self.repo, 'README.md', 'readme, edited on main\n')
+        git(self.repo, 'add', '-A')
+        git(self.repo, 'commit', '-q', '-m', 'main moves on')
+        git(self.repo, 'checkout', '-q', 'pr')
+        code, stdout, output = self.check()
+        self.assertEqual(code, 0, stdout)
+        self.assertIn('"name": "2026-11-02-model-x-v1"', output)
+
+    def test_a_pull_request_that_does_not_merge_cleanly(self):
+        write(self.repo, 'leaderboard/board.json', '{"rows": "pr"}\n')
+        self.add_submission('2026-11-02-model-x-v1')
+        git(self.repo, 'add', '-A')
+        git(self.repo, 'commit', '-q', '-m', 'pr')
+        git(self.repo, 'checkout', '-q', 'main')
+        write(self.repo, 'leaderboard/board.json', '{"rows": "main"}\n')
+        git(self.repo, 'add', '-A')
+        git(self.repo, 'commit', '-q', '-m', 'main moves on')
+        git(self.repo, 'checkout', '-q', 'pr')
+        self.assert_refused('does not merge cleanly')
+
+    def criss_cross(self):
+        """main holds a merge commit whose two parents are not ancestors of each other
+        (GitHub's merge button makes one for a pull request branched from an older main):
+        alice's submission came in on one side, bob's on the other. The attacker branches
+        from bob's side and records alice's side as merged with -s ours, dropping alice."""
+        git(self.repo, 'checkout', '-q', 'main')
+        git(self.repo, 'checkout', '-q', '-b', 'bob')
+        self.add_submission('2026-11-02-bob-v1')
+        git(self.repo, 'add', '-A')
+        git(self.repo, 'commit', '-q', '-m', 'bob')
+        git(self.repo, 'checkout', '-q', 'main')
+        self.add_submission('2026-11-02-alice-v1')
+        git(self.repo, 'add', '-A')
+        git(self.repo, 'commit', '-q', '-m', 'alice')
+        git(self.repo, 'merge', '-q', '--no-ff', '--no-edit', 'bob')
+        git(self.repo, 'branch', '-q', '-D', 'pr')
+        git(self.repo, 'checkout', '-q', '-b', 'pr', 'bob')
+        git(self.repo, 'merge', '-q', '-s', 'ours', '--no-edit', 'main~1')
+        self.add_submission('2026-11-03-mallory-v1')
+        write(self.repo, 'leaderboard/board.json', '{"rows": "without alice"}\n')
+
+    def test_a_criss_cross_history_is_refused(self):
+        # verification of F17: the diff against one merge base showed only the new folder,
+        # and merging deleted alice's accepted submission.
+        self.criss_cross()
+        bases = git(self.repo, 'merge-base', '--all', 'main', 'pr').split()
+        self.assertEqual(len(bases), 2)
+        self.assert_refused('2 merge bases')
+
+    def test_the_merge_result_shows_what_a_criss_cross_pull_request_removes(self):
+        sys.path.insert(0, str(REPO / 'tools'))
+        import check_pr_scope
+        self.criss_cross()
+        git(self.repo, 'add', '-A')
+        git(self.repo, 'commit', '-q', '-m', 'pr')
+        cwd = os.getcwd()
+        os.chdir(self.repo)
+        try:
+            with unittest.mock.patch.object(check_pr_scope, 'merge_result', side_effect=lambda base, head: git(
+                    self.repo, 'merge-tree', '--write-tree', '--no-messages', base, head).split()[0]):
+                rows = check_pr_scope.changes('main', 'pr')
+        finally:
+            os.chdir(cwd)
+        removed = [path for status, _mode, path in rows if status == 'D']
+        self.assertIn('runs/submitted/2026-11-02-alice-v1/run.json', removed)
+
+    def test_an_unrelated_history_is_refused(self):
+        git(self.repo, 'checkout', '-q', '--orphan', 'other')
+        git(self.repo, 'rm', '-q', '-r', '--cached', '.')
+        self.add_submission('2026-11-02-model-x-v1')
+        git(self.repo, 'add', '-A')
+        git(self.repo, 'commit', '-q', '-m', 'unrelated')
+        git(self.repo, 'branch', '-q', '-D', 'pr')
+        git(self.repo, 'branch', '-q', '-m', 'other', 'pr')
+        self.assert_refused('0 merge bases')
+
 
 class WorkflowTrustBoundaryTests(unittest.TestCase):
     """The pull-request jobs run the base branch's code and read the pull request as data."""
@@ -138,8 +253,23 @@ class WorkflowTrustBoundaryTests(unittest.TestCase):
         self.text = WORKFLOW.read_text()
 
     def test_triggers(self):
-        self.assertRegex(self.text, r"(?m)^  pull_request_target:\n    paths:\n      - 'runs/\*\*'\n      - 'leaderboard/\*\*'\n")
+        # Every pull request, with no paths filter: GitHub matches a filter against only the
+        # first 3,000 changed files, and a required check that a filter skips stays pending.
+        self.assertRegex(self.text, r"(?m)^on:\n  pull_request_target:\n  push:\n    branches: \[main\]\n")
         self.assertNotRegex(self.text, r'(?m)^  pull_request:')
+        self.assertNotRegex(self.text, r'(?m)^\s+paths(-ignore)?:')
+
+    def test_the_verdict_job_sums_up_the_others(self):
+        # A skipped job counts as passed in a required check: the verdict runs always and
+        # fails unless every job that applies passed.
+        start = self.text.index('\n  verdict:\n')
+        block = self.text[start:self.text.index('\n  tests:\n')]
+        self.assertIn('needs: [changed, submission, board]', block)
+        self.assertIn("if: always() && github.event_name == 'pull_request_target'", block)
+        for line in ('test "$CHANGED" = success', 'test "$KIND" = code || test "$BOARD" = success',
+                     'test "$KIND" = code || test "$ANY" != true || test "$SUBMISSION" = success'):
+            self.assertIn(line, block)
+        self.assertIn("needs.changed.outputs.kind == 'submission'", self.text)
 
     def test_read_only_token_no_secrets_no_kept_credentials(self):
         self.assertRegex(self.text, r'(?m)^permissions:\n  contents: read\n\n')

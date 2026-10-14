@@ -8,13 +8,16 @@
 # under pr/ as data: nothing from the pull request is executed, imported or installed.
 # The token is read-only, no secrets are used, and no checkout keeps credentials. The
 # only actions are actions/checkout and actions/setup-python, pinned by commit SHA.
+#
+# The check runs on every pull request, with no paths filter: GitHub matches a paths
+# filter against only the first 3,000 changed files, and a required check that a
+# filter skips stays pending. The scope check itself decides whether a pull request is
+# a submission (it changes runs/ or leaderboard/) or a code change. The verdict job
+# sums up the others; it is the one check to require (MAINTAINING.md).
 name: validate
 
 on:
   pull_request_target:
-    paths:
-      - 'runs/**'
-      - 'leaderboard/**'
   push:
     branches: [main]
 
@@ -26,6 +29,7 @@ jobs:
     if: github.event_name == 'pull_request_target'
     runs-on: ubuntu-24.04
     outputs:
+      kind: ${{ steps.find.outputs.kind }}
       matrix: ${{ steps.find.outputs.matrix }}
       any: ${{ steps.find.outputs.any }}
     steps:
@@ -38,13 +42,14 @@ jobs:
         with:
           python-version: '3.12.3'
       - id: find
-        name: Check what the pull request changes; list its submissions and the CPython version each names
+        name: Check what merging the pull request would change; list its submissions and the CPython version each names
         env:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           # A submission pull request may only add new folders runs/submitted/<name>/ and
           # change leaderboard/board.json. Anything else (tools, env, scorer, published
           # records, existing submissions) is a code change and goes through a normal review.
+          # The check compares the base branch with the merge result (git merge-tree).
           git fetch --no-tags origin "$HEAD_SHA"
           python3 -B tools/check_pr_scope.py --base HEAD --head "$HEAD_SHA" --github-output "$GITHUB_OUTPUT"
 
@@ -78,7 +83,7 @@ jobs:
 
   board:
     needs: changed
-    if: github.event_name == 'pull_request_target'
+    if: github.event_name == 'pull_request_target' && needs.changed.outputs.kind == 'submission'
     runs-on: ubuntu-24.04
     steps:
       # The base branch's build_board.py rebuilds the board from the pull request's runs/
@@ -97,6 +102,28 @@ jobs:
           python-version: '3.12.3'
       - name: Leaderboard is up to date
         run: python3 -B tools/build_board.py --runs pr/runs --out pr/leaderboard/board.json --check
+
+  verdict:
+    # A skipped job counts as passed in a required check, so require this job alone: it
+    # fails unless the scope check passed and, for a submission pull request, the board
+    # and every listed submission passed too.
+    needs: [changed, submission, board]
+    if: always() && github.event_name == 'pull_request_target'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Every pull-request check passed
+        env:
+          CHANGED: ${{ needs.changed.result }}
+          KIND: ${{ needs.changed.outputs.kind }}
+          ANY: ${{ needs.changed.outputs.any }}
+          SUBMISSION: ${{ needs.submission.result }}
+          BOARD: ${{ needs.board.result }}
+        run: |
+          echo "scope: $CHANGED, kind: $KIND, submissions listed: $ANY, validator: $SUBMISSION, board: $BOARD"
+          test "$CHANGED" = success
+          test "$KIND" = code || test "$KIND" = submission
+          test "$KIND" = code || test "$BOARD" = success
+          test "$KIND" = code || test "$ANY" != true || test "$SUBMISSION" = success
 
   tests:
     if: github.event_name == 'push'
