@@ -111,10 +111,12 @@ for agent wall time.
 
 A run may make at most 1,024 tool-call attempts (refused calls count). The
 scripted correct jobs use 436 to 440. A run that reaches the budget is scored
-on its final state and reported as incomplete with the reason. The environment
-still records a call made after the budget is spent (as a refused attempt), but
-this scorer refuses a record of more than 1,024 attempts (`record-domain`), so
-an agent should stop calling tools when `turns_remaining` reaches 0. A run that
+on its final state and reported as incomplete with the reason. The pinned
+environment server still records a call made after the budget is spent (as a
+refused attempt), and this scorer refuses a record of more than 1,024 attempts
+(`record-domain`), so an agent should stop calling tools when `turns_remaining`
+reaches 0. The launcher (`headgasket serve`, release 0.1.2 and later) answers
+such a call itself without recording it, so its records stop at 1,024. A run that
 stops early is scored as it stands: a partial record earns the points its
 evidence supports, and a successful `finish` call is separate from passing
 every checkpoint. A successful action recorded after a committed finish is

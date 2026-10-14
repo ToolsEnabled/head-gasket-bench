@@ -1,8 +1,9 @@
 # Leaderboard data
 
 `board.json` is built from the runs tree by `python3 tools/build_board.py`
-(and checked with `--check` on every pull request that touches `runs/` or
-`leaderboard/`). It is a JSON object with
+(and checked with `--check` on every pull request that changes anything under
+`runs/` or `leaderboard/`, however many other files it changes, and on every push
+to main). It is a JSON object with
 `schema` (`head-gasket-bench/board/v1`), a `note`, the list of `fields`, and
 `rows`, one per run, as recorded; nothing is averaged.
 

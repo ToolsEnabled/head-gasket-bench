@@ -4,7 +4,9 @@ An AI agent connects to this environment over MCP and replaces the head
 gasket on a real 1990s 1.6 L SOHC inline-four. The engine is on a service
 stand. The initial state reports the bench preparations (engine cold, battery
 isolated, coolant drained, engine supported and others) as not yet done: the
-agent records each with `prepare_condition`, and some removals need them. The
+agent records each with `prepare_condition`, and some removals need them (the
+timing marks can be recorded only after the timing has been set and checked
+aligned). The
 agent has to set the engine to top dead centre, strip the
 belt, cover and accessories in a valid order, loosen and lift the head in
 stages, clean and measure the mating faces, decide what to do about bolts and
@@ -73,10 +75,12 @@ sequence or the correct stock part.
 Budget: 1,024 tool-call attempts per run. Every attempt counts, refusals
 included; a refusal rolls the state back, but its base technician seconds are
 charged as penalty time. The reply to each call carries `turns_remaining`. When
-it reaches 0, stop calling tools: the environment still records any further
-call (and charges it), and the pinned independent scorer cannot score a record
-of more than 1,024 attempts, so such a run cannot be submitted. That is a known
-issue of this environment epoch.
+it reaches 0, stop calling tools. `serve` answers any further call itself with the
+refusal the environment gives (`Environment turn budget reached`,
+`turns_remaining` 0) and does not record it, so the record stops at 1,024
+attempts. The pinned server itself would record such a call, and the pinned
+independent scorer cannot score a record of more than 1,024 attempts (a known
+issue of this environment epoch), so always start the server with `serve`.
 
 ## The five variants
 
@@ -115,12 +119,19 @@ python3 /ABS/REPO/env/bin/headgasket-mcp serve --variant V1 --out /ABS/RUNS/v1-f
 
 Use absolute paths; MCP clients start servers from a working directory you do
 not control. The folder named by `--out` must be new or empty; `serve` creates
-a new one readable only by you, refuses a folder that is a link or holds links,
-and refuses a folder another `serve` is using. A start that makes no tool call
+a new one readable only by you, and refuses a folder that is a link or holds
+links, that belongs to another user, that other users can write to (the pinned
+server writes its files by name, so such a user could plant a link during the
+run), or that another `serve` is using. A folder your group can write to is
+accepted; keep `--out` where only you can write. A start that makes no tool call
 (a client's health check such as `claude mcp list` or `claude mcp get`, a
 listed or restarted server, a session you quit before the agent called a tool)
-records nothing and leaves nothing behind; if a client kills the server before
-it can clean up, the next start clears those leftovers. Once the agent has made
+records nothing and leaves nothing behind when the server can stop normally; if
+a client kills the server process itself before it can clean up (a client that
+starts the server directly and signals it, or a kill of the whole process group),
+an empty `actions.jsonl` and possibly a record with no actions are left, and the
+next start clears them. Through `tools/claude-code-proxy.py` nothing is left.
+Once the agent has made
 a call, the folder holds that run, and the next run needs a new folder. The
 server writes the record after every call, so an interrupted run keeps its
 last committed state, and exits when the client closes its input. Each write
@@ -131,14 +142,18 @@ loop-mounted storage.
 Configuration snippets for some clients follow. They are examples of the
 wiring, not a recommendation of any client or model.
 
-**Claude Code**
+**Claude Code**, in the empty folder `/ABS/WORK` outside the clone (`claude mcp
+add` registers the server only for the folder it is run in, so run both commands
+there; `--tools ""` turns Claude Code's own tools off, so the agent has only the
+18 job tools):
 
 ```sh
+mkdir -p /ABS/WORK && cd /ABS/WORK
 claude mcp add headgasket -- python3 /ABS/REPO/tools/claude-code-proxy.py python3 /ABS/REPO/env/bin/headgasket-mcp serve --variant V1 --out /ABS/RUNS/v1-first-try
-MAX_MCP_OUTPUT_TOKENS=150000 claude
+MAX_MCP_OUTPUT_TOKENS=150000 claude --tools "" --allowedTools mcp__headgasket
 ```
 
-or in a project `.mcp.json`:
+or in `/ABS/WORK/.mcp.json`:
 
 ```json
 {
@@ -206,15 +221,21 @@ The repository holds complete correct solutions: the scripted records under
 agent that can read files could copy them. Start the client in `/ABS/WORK`,
 outside the clone, with its own file and shell tools turned off, and say how you
 did it in `SUBMISSION.json` `notes`. The `claude-haiku-5-5` baseline ran Claude
-Code like this (headless, only the 18 job tools; `headgasket.mcp.json` holds the
-`mcpServers` object shown above):
+Code headless with this command, under a five-hour time limit
+(`headgasket.mcp.json` holds the `mcpServers` object shown above):
 
 ```sh
 cd /ABS/WORK
-MAX_MCP_OUTPUT_TOKENS=150000 claude -p "<the task prompt>" --tools "" \
-  --mcp-config /ABS/WORK/headgasket.mcp.json --strict-mcp-config \
-  --allowedTools mcp__headgasket --permission-mode dontAsk
+MAX_MCP_OUTPUT_TOKENS=150000 claude -p "<the task prompt>" --model claude-haiku-5-5 \
+  --tools "" --mcp-config /ABS/WORK/headgasket.mcp.json --strict-mcp-config \
+  --allowedTools mcp__headgasket --permission-mode dontAsk --setting-sources project \
+  --output-format stream-json --verbose --no-session-persistence > session.jsonl
 ```
+
+`--tools ""` leaves only the 18 job tools, `--strict-mcp-config` keeps every other
+MCP server out, `--setting-sources project` keeps user-level settings and hooks
+out, `--no-session-persistence` does not save the session, and the session's
+messages go to `session.jsonl`.
 
 The server cannot enforce this: it is not a sandbox (see [SECURITY.md](SECURITY.md)).
 
@@ -248,7 +269,8 @@ All in the `--out` folder:
 | `finish-record.json` | The complete record at the moment `finish` succeeded (absent if the run never finished) |
 | `launch.json` | Variant, configuration pin, source pin, interpreter version, UTC start and end (written when the server stops after at least one call) |
 
-A start without any tool call leaves no files. The record is written atomically after every call. Each action row carries
+A start without any tool call leaves no files when the server can stop normally (see above for a
+killed start). The record is written atomically after every call. Each action row carries
 `pre_state_sha256`, `post_state_sha256` and `previous_action_sha256`; the
 chain starts at the configuration hash, so no action can be inserted, removed
 or reordered without breaking it. See [docs/RECORD-FORMAT.md](docs/RECORD-FORMAT.md).

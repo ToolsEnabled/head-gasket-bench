@@ -58,8 +58,20 @@ agree. The secondary checklists use different item sets (the environment's
 equal percentages; agreement on shared fields does not make every predicate
 equal. Because the item sets differ, the scorer's line `comparison of shared
 secondary fields (bolts, mistakes, time)` reads `disagreement` on every record,
-the 18/18 ones included; `compare` lists the item-set sizes and, below them, any
-field that really differs. For the published records no field differs.
+the 18/18 ones included. `compare` prints, directly under that line, one line per
+shared field whose values differ (`<field>: independent <value> vs embedded
+<value>`), and below those the item-set sizes (`independent_only_items`,
+`producer_only_items`). The `evidence ...` lines under the primary-checkpoint
+line show each checkpoint's evidence in the two scorers' own formats; they are
+not compared. Two kinds of field line are not differences, and the submission
+validator does not count them: an independent value of `None` means unknown (the
+independent scorer cannot determine it, for example on parts a run never touched
+or the penalty of a run that calls `finish` early), and a `mistakes/by_type` line
+that differs only by `missing_timing_verification` shows a mistake type that only
+the independent scorer has (the environment scores the same fact in checkpoint
+CP11, which both decide). Every other shared field must agree. For the published
+records no field differs; a record of your own, for example a finished run
+without a final timing check, can show such lines and still pass the validator.
 
 ## Regenerate the configurations and the scripted family
 

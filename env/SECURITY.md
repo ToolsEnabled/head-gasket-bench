@@ -70,10 +70,13 @@ strictly and meets invalid UTF-8; that is a known issue for the next
 environment epoch.)
 
 The launcher writes only into the `--out` folder: it creates a new folder
-readable only by you, refuses a folder that is a link, holds links or is in use
-by another server, and writes `launch.json` without following links. The pinned
-server writes its files by name inside that folder; keep `--out` in a place
-other people cannot write to.
+readable only by you, refuses a folder that is a link, holds links, belongs to
+another user, can be written by other users or is in use by another server, and
+writes `launch.json` without following links. The pinned server writes its files
+by name inside that folder, following links, so a folder your group can write to
+(which the launcher accepts) is safe only if you trust the group; keep `--out`
+where only you can write. Once the 1,024-attempt budget is spent, the launcher
+answers further tool calls itself and does not pass them to the server.
 
 The server is not a sandbox for the AI client that drives it. It cannot stop a
 client from using other tools, reading files or calling networks; isolating

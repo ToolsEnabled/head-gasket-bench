@@ -2,8 +2,9 @@
 
 Anyone can submit a run: open a pull request that adds one folder
 `runs/submitted/<name>/` and the rebuilt `leaderboard/board.json`. A check runs
-on the pull request; a maintainer reviews the pull request and merges it when
-the check passes, and the run then appears on the board.
+on the pull request; a maintainer reviews every submission by hand and merges it
+when the check passes and the review holds up (`MAINTAINING.md`), and the run
+then appears on the board.
 
 ## 1. Make the run
 
@@ -21,10 +22,13 @@ check, for example) records nothing.
   (`env/README.md` shows how the baseline did it with Claude Code), and state the
   setup in `notes`.
 - **Stop at the budget.** A run has 1,024 tool-call attempts, refused ones
-  included. When `turns_remaining` reaches 0, stop calling tools: the environment
-  still records any further call, and the pinned independent scorer cannot score
-  a record of more than 1,024 attempts, so such a run cannot be submitted (a
-  known issue of this environment epoch; the validator says so plainly).
+  included. When `turns_remaining` reaches 0, stop calling tools. `serve` (release
+  0.1.2 and later) answers any further call itself with the budget refusal and
+  does not record it, so its record stops at 1,024 attempts. The pinned server
+  itself still records such calls, and the pinned independent scorer cannot score
+  a record of more than 1,024 attempts, so a record made another way (the 0.1.1
+  launcher, or the server started without it) that goes over cannot be submitted
+  (a known issue of this environment epoch; the validator says so plainly).
 - **Mind `look`.** Each `look` call adds about 0.4 MB to the folder (its result
   of about 200,000 characters is stored in `run.json` and again in
   `actions.jsonl`), so a run with about 150 or more `look` calls is larger than
@@ -40,7 +44,8 @@ check, for example) records nothing.
 starting with a letter or digit, for example `2026-11-02-model-x-v1`. One run per
 folder, and a new run: a record that makes the same tool calls as a published
 scripted record or another submission, or that is a withheld ToolsEnabled record,
-is refused.
+is refused, and a near copy of one (most of its calls, in order, the same) is
+marked for the maintainer's review.
 The folder holds exactly five regular files (no links):
 
 | File | What it is |
@@ -107,7 +112,14 @@ and exits non-zero on any failure. It checks, in order:
    is free).
 5. **duplicate**: the tool calls are not those of a published scripted record
    (`runs/family/`, `runs/reference/`) or of another submission, and the files are
-   not a withheld ToolsEnabled record.
+   not a withheld ToolsEnabled record. The validator also counts the calls the
+   run shares, in order, with the closest scripted record and the closest
+   submission (the longest common subsequence of the two call lists). When that is
+   80% or more of the shorter record's calls and at least 20 calls, the run is a
+   near copy: it still passes, but the `PASS` line ends with
+   `REVIEW BY HAND: ...`, and the maintainer does not merge it unless the
+   submitter shows that a model made it. The model runs ToolsEnabled made share at
+   most 54% of their calls with any scripted record.
 6. **pins**: the configuration is one of the five pinned configurations in
    `env/configs/PINS.json` and matches the declared variant; the record was
    made with the current environment runtime and with CPython 3.12.
@@ -121,32 +133,47 @@ and exits non-zero on any failure. It checks, in order:
    produces (`missing_timing_verification`, a finished run without a final timing
    check of enough revolutions; the environment scores the same fact in CP11,
    which both decide); neither is compared. `RESULT.md` must be exactly the file
-   `--write-result` generates.
+   `--write-result` generates. Its points, S_full, S_partial and failed
+   checkpoints are the independent scorer's (equal to the environment's); its
+   productive and penalty seconds and mistake events are the environment's
+   figures from `run.json`, the same as on the board; and its row
+   `calls in common with a scripted record` gives the count from the
+   duplicate check.
 
 The scorer's own `comparison of shared secondary fields` line says
 `disagreement` on every record because the two checklists have different item
 sets; the validator compares the fields, not that line.
 
 **The pull-request check** (`.github/workflows/validate.yml`) runs on
-`pull_request_target` for any pull request that touches `runs/` or
-`leaderboard/`. GitHub then takes the workflow file from the main branch, so a
-pull request cannot change what its own check runs, and every script the check
-runs (the scope check `tools/check_pr_scope.py`, the validator, the environment,
-the scorer and `tools/build_board.py`) comes from the main branch. The pull
-request's files are read with git and checked out under `pr/` as data only:
-nothing from the pull request is executed, imported or installed. The token is
-read-only, no secrets are used, and no checkout keeps credentials. The check:
+`pull_request_target` for every pull request (there is no paths filter, which
+GitHub would match against only the first 3,000 changed files). GitHub takes the
+workflow file from the main branch, so a pull request cannot change what its own
+check runs, and every script the check runs (the scope check
+`tools/check_pr_scope.py`, the validator, the environment, the scorer and
+`tools/build_board.py`) comes from the main branch. The pull request's files are
+read with git and checked out under `pr/` as data only: nothing from the pull
+request is executed, imported or installed. The token is read-only, no secrets
+are used, and no checkout keeps credentials. The check:
 
-- refuses the pull request unless it only adds new folders
-  `runs/submitted/<name>/` of regular files with valid names (a space, a link or
-  a stray file cannot slip past) and changes `leaderboard/board.json`; a change
-  to anything else, including a published record or a submission already on main,
-  is a code change and is reviewed as one;
+- works out what merging the pull request would change on main (`git merge-tree`,
+  then a diff of main against that result), and refuses a pull request whose
+  history has more than one merge base with main, or that does not merge
+  cleanly: rebase it on the current main;
+- treats a pull request that changes anything under `runs/` or `leaderboard/` as
+  a submission and refuses it unless it only adds new folders
+  `runs/submitted/<name>/` (at most ten) of regular files with valid names (a
+  space, a link or a stray file cannot slip past) and changes
+  `leaderboard/board.json`; a change to anything else, including a published
+  record or a submission already on main, is a code change and is reviewed as
+  one; a pull request that changes nothing under `runs/` or `leaderboard/` is a
+  code change and passes this check to a maintainer's review;
 - runs the validator on each new submission, under the CPython version the record
   names;
 - rebuilds the board from the pull request's `runs/` with main's
   `tools/build_board.py` and compares it with the pull request's
-  `leaderboard/board.json`.
+  `leaderboard/board.json`;
+- ends with a `verdict` job that fails unless every job that applies passed (the
+  check to require; see `MAINTAINING.md`).
 
 Maintainers do not merge a submission pull request that changes anything beyond
 its `runs/submitted/<name>/` folder and `leaderboard/board.json`, whatever the
@@ -178,17 +205,22 @@ under the published runtime, and scores the same under the independent scorer.
 it, how many model calls it took or what it cost: the model label and client
 are the submitter's statements and are shown as such. Nor can it tell a model
 run from a scripted one: the validator refuses an exact copy of a published or
-submitted run, but a run that changes a single call is a new record. Every 18/18
-submission is therefore reviewed by hand before it is merged. A run that ends
+submitted run and marks a near copy for review, but a scripted run edited enough
+is a new record. Every submission, whatever its score, is therefore reviewed by
+hand before it is merged (`MAINTAINING.md`). A run that ends
 without `finish` is scored as it stands and is listed; a record with no tool
 call is refused, since there is nothing to score. By submitting you agree that
 the five files are published in this repository under its MIT licence.
 
 Known issues of this environment epoch, which need new pinned code to fix (see
-the release notes): a record of more than 1,024 attempts cannot be scored; and on
-a run that makes a refused `prepare_condition` or `release_attachment` attempt
-during disassembly, the environment and the independent scorer can decide CP02
-differently, and the validator then refuses the run, because primary checkpoints
-must agree.
+the release notes): a record of more than 1,024 attempts cannot be scored (`serve`
+0.1.2 stops recording at 1,024); and on a run that makes a refused
+`prepare_condition` or `release_attachment` attempt during disassembly, the
+environment and the independent scorer can decide CP02 differently, and the
+validator then refuses the run, because primary checkpoints must agree. The
+second is common: all five finished `claude-opus-5-5` runs ToolsEnabled made for
+release 0.1.2 hit it (16 of 18 in the environment, 14 under the independent
+scorer), so none of them could be submitted. A run without such refused attempts
+is not affected.
 
 ToolsEnabled is not affiliated with or endorsed by Anthropic, OpenAI or any other AI provider.
