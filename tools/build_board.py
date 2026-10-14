@@ -11,6 +11,7 @@ tools/validate_submission.py (which replays and rescores them).
 """
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -18,8 +19,9 @@ REPO = Path(__file__).resolve().parents[1]
 FIELDS = ('name', 'model_label', 'client', 'variant', 'points', 's_partial', 's_full', 'penalty_s',
           'productive_s', 'date', 'source', 'exploratory')
 BY_TOOLSENABLED = 'run by ToolsEnabled'
+NAME_RE = re.compile(r'[a-z0-9][a-z0-9._-]{2,99}')  # the validator's folder-name rule, used with fullmatch
 
-# The runs ToolsEnabled collected before submissions opened. Labels follow the paper
+# The runs made by ToolsEnabled (exploratory: true). Labels follow the paper
 # (Table 1): the requested model is a label, not an attested identity.
 REFERENCE = {'V1-amended': {'model_label': 'scripted reference (no model)', 'client': 'scripted', 'date': '2026-10-10'}}
 EXPLORATORY = {
@@ -63,6 +65,9 @@ def reference_rows(runs):
 def exploratory_rows(runs):
     rows = []
     for folder in sorted(p for p in (runs / 'exploratory').iterdir() if p.is_dir()):
+        if folder.name not in EXPLORATORY:
+            raise SystemExit(f'runs/exploratory/{folder.name}: not a run this build_board.py knows '
+                             '(rebase the pull request on the current main branch)')
         meta = EXPLORATORY[folder.name]
         summary = load(folder / 'environment-score.json')
         rows.append(row('exploratory/' + folder.name, meta['model_label'], meta['client'], summary['variant'],
@@ -77,7 +82,16 @@ def submitted_rows(runs):
     root = runs / 'submitted'
     if not root.is_dir():
         return rows
-    for folder in sorted(p for p in root.iterdir() if p.is_dir()):
+    for folder in sorted(root.iterdir()):
+        # Every entry must be a real submission folder with regular files: a link, a stray
+        # file or an odd name would otherwise put a row on the board that the pull-request
+        # check never validated.
+        if folder.is_symlink() or not folder.is_dir() or not NAME_RE.fullmatch(folder.name):
+            raise SystemExit(f'runs/submitted/{folder.name!r}: every entry must be a submission folder (not a link '
+                             'or a file) named like the validator requires (3-100 characters: a-z, 0-9, ".", "_", "-")')
+        for name in ('SUBMISSION.json', 'run.json'):
+            if (folder / name).is_symlink() or not (folder / name).is_file():
+                raise SystemExit(f'runs/submitted/{folder.name}/{name}: not a regular file')
         declaration = load(folder / 'SUBMISSION.json')
         record = load(folder / 'run.json')
         rows.append(row('submitted/' + folder.name, declaration['model_label'], declaration['client'], record['config']['variant_id'],

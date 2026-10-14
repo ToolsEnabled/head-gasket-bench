@@ -1,12 +1,20 @@
 # Validate submitted runs on pull requests; run every test suite on pushes to main.
-# No secrets are used. The only actions are actions/checkout and actions/setup-python,
-# pinned by commit SHA; nothing else is downloaded.
+#
+# The pull-request jobs run on pull_request_target, so GitHub takes this workflow file
+# from the base branch: a pull request cannot change what its own check runs. Every
+# script the jobs run (tools/check_pr_scope.py, tools/validate_submission.py, the
+# environment, the scorer and tools/build_board.py) comes from the base branch's
+# checkout. The pull request's commits are read with git, and its files are checked out
+# under pr/ as data: nothing from the pull request is executed, imported or installed.
+# The token is read-only, no secrets are used, and no checkout keeps credentials. The
+# only actions are actions/checkout and actions/setup-python, pinned by commit SHA.
 name: validate
 
 on:
-  pull_request:
+  pull_request_target:
     paths:
-      - 'runs/submitted/**'
+      - 'runs/**'
+      - 'leaderboard/**'
   push:
     branches: [main]
 
@@ -15,7 +23,7 @@ permissions:
 
 jobs:
   changed:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request_target'
     runs-on: ubuntu-24.04
     outputs:
       matrix: ${{ steps.find.outputs.matrix }}
@@ -23,49 +31,22 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: '3.12.3'
       - id: find
-        name: List changed submissions and the CPython version each record names
+        name: Check what the pull request changes; list its submissions and the CPython version each names
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          # A submission pull request may add or change only runs/submitted/<name>/ and the
-          # regenerated leaderboard/board.json. Anything else (tools, env, scorer) is a code
-          # change and goes through a normal review, not through this check.
-          outside=$(git diff --name-only "$BASE_SHA" HEAD | grep -v -e '^runs/submitted/' -e '^leaderboard/board\.json$' || true)
-          if [ -n "$outside" ]; then
-            echo "::error::A submission pull request may change only runs/submitted/<name>/ and leaderboard/board.json. Also changed:"
-            echo "$outside"
-            exit 1
-          fi
-          git diff --name-only "$BASE_SHA" HEAD -- runs/submitted > changed.txt
-          python3 - <<'PY'
-          import json, os, re
-          from pathlib import Path
-          names = sorted({p.split('/')[2] for p in Path('changed.txt').read_text().split() if p.count('/') >= 3})
-          rows = []
-          for name in names:
-              if not re.fullmatch(r'[a-z0-9][a-z0-9._-]{2,99}', name):
-                  raise SystemExit(f'bad submission folder name: {name!r}')
-              folder = Path('runs/submitted') / name
-              if not folder.is_dir():
-                  continue  # a removed submission has nothing to validate
-              version = '3.12.3'
-              try:
-                  found = json.loads((folder / 'run.json').read_bytes())['environment_source']['interpreter']['version']
-                  if isinstance(found, list) and len(found) == 3 and found[:2] == [3, 12] and all(type(v) is int for v in found):
-                      version = '.'.join(map(str, found))
-              except Exception:
-                  pass  # the validator reports the problem
-              rows.append({'name': name, 'python': version})
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
-              out.write('matrix=' + json.dumps({'include': rows}) + '\n')
-              out.write('any=' + ('true' if rows else 'false') + '\n')
-          PY
+          # A submission pull request may only add new folders runs/submitted/<name>/ and
+          # change leaderboard/board.json. Anything else (tools, env, scorer, published
+          # records, existing submissions) is a code change and goes through a normal review.
+          git fetch --no-tags origin "$HEAD_SHA"
+          python3 -B tools/check_pr_scope.py --base HEAD --head "$HEAD_SHA" --github-output "$GITHUB_OUTPUT"
 
   submission:
     needs: changed
@@ -76,15 +57,15 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.changed.outputs.matrix) }}
     steps:
-      # The validator, environment and scorer come from the base branch, never from the
-      # pull request; the pull request supplies only the submission folder (checked out
-      # under pr/ and read as data).
+      # The validator, environment and scorer come from the base branch; the pull request
+      # supplies only the submission folder, read as data under pr/.
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           path: pr
           persist-credentials: false
       - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
@@ -97,17 +78,25 @@ jobs:
 
   board:
     needs: changed
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request_target'
     runs-on: ubuntu-24.04
     steps:
+      # The base branch's build_board.py rebuilds the board from the pull request's runs/
+      # and compares it with the pull request's leaderboard/board.json.
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: pr
           persist-credentials: false
       - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
           python-version: '3.12.3'
       - name: Leaderboard is up to date
-        run: python3 -B tools/build_board.py --check
+        run: python3 -B tools/build_board.py --runs pr/runs --out pr/leaderboard/board.json --check
 
   tests:
     if: github.event_name == 'push'

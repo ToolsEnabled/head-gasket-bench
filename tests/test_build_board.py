@@ -83,6 +83,46 @@ class BuildBoardTests(unittest.TestCase):
             out.write_bytes(out.read_bytes().replace(b'"points": 2,', b'"points": 3,'))
             self.assertEqual(build_board.main(['--runs', str(runs), '--out', str(out), '--check']), 1)
 
+    def test_links_stray_files_and_odd_names_under_submitted_are_refused(self):
+        # redteam F2: a folder whose name has a space, or a link, skipped the pull-request
+        # validator while build_board.py still put it on the board.
+        record = fake_record('V1', 18, 1, 13630, 0)
+        declaration = {'model_label': 'model-x', 'client': 'client-x', 'variant': 'V1', 'date': '2026-11-01',
+                       'submitter': 'tester'}
+        for case in ('space', 'link', 'dot-link', 'stray-file', 'linked-record'):
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as tmp:
+                runs = Path(tmp) / 'runs'
+                for part in ('reference', 'exploratory'):
+                    shutil.copytree(REPO / 'runs' / part, runs / part,
+                                    ignore=shutil.ignore_patterns('actions.jsonl', 'report.json'))
+                submitted = runs / 'submitted'
+                real = submitted / ('x y' if case == 'space' else 'real-run')
+                real.mkdir(parents=True)
+                (real / 'run.json').write_text(json.dumps(record))
+                (real / 'SUBMISSION.json').write_text(json.dumps(declaration))
+                if case == 'link':
+                    (submitted / 'gpt-7-ultra-r1').symlink_to('real-run')
+                elif case == 'dot-link':
+                    (submitted / 'gpt-7-ultra-r1').symlink_to('.')
+                elif case == 'stray-file':
+                    (submitted / 'CLAIM.md').write_text('18/18')
+                elif case == 'linked-record':
+                    (real / 'run.json').unlink()
+                    (real / 'run.json').symlink_to(Path(tmp) / 'elsewhere.json')
+                    (Path(tmp) / 'elsewhere.json').write_text(json.dumps(record))
+                with self.assertRaises(SystemExit):
+                    build_board.build(runs)
+
+    def test_an_unknown_exploratory_run_is_named(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            runs = Path(tmp) / 'runs'
+            for part in ('reference', 'exploratory'):
+                shutil.copytree(REPO / 'runs' / part, runs / part, ignore=shutil.ignore_patterns('actions.jsonl', 'report.json'))
+            (runs / 'exploratory' / 'not-a-known-run').mkdir()
+            with self.assertRaises(SystemExit) as caught:
+                build_board.build(runs)
+            self.assertIn('not-a-known-run', str(caught.exception))
+
 
 if __name__ == '__main__':
     unittest.main()
