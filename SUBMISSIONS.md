@@ -86,7 +86,11 @@ and exits non-zero on any failure. It checks, in order:
 
 The pull-request check (`.github/workflows/validate.yml`) runs the same
 validator on each changed submission, under the CPython version the record
-names, and checks that `leaderboard/board.json` is up to date. Rebuild it with
+names, using the validator, environment and scorer of the main branch (never
+code from the pull request), and checks that `leaderboard/board.json` is up to
+date. A submission pull request may change only `runs/submitted/<name>/` and
+`leaderboard/board.json`; a pull request that changes anything else is a code
+change and is reviewed as one. Rebuild it with
 `python3 tools/build_board.py` and commit the result in the same pull request.
 
 ## 4. What the board shows
