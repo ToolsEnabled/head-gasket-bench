@@ -1,0 +1,76 @@
+{
+  "schema": "head-gasket-bench/board/v1",
+  "note": "One row per run, as recorded; nothing is averaged. Exploratory rows are single runs by ToolsEnabled that describe behaviour and do not rank models. Model labels are stated, not attested. Technician seconds are analyst estimates. ToolsEnabled is not affiliated with or endorsed by Anthropic, OpenAI or any other AI provider.",
+  "fields": [
+    "name",
+    "model_label",
+    "client",
+    "variant",
+    "points",
+    "s_partial",
+    "s_full",
+    "penalty_s",
+    "productive_s",
+    "date",
+    "source",
+    "exploratory"
+  ],
+  "rows": [
+    {
+      "name": "reference/V1-amended",
+      "model_label": "scripted reference (no model)",
+      "client": "scripted",
+      "variant": "V1",
+      "points": 18,
+      "s_partial": 1.0,
+      "s_full": 1,
+      "penalty_s": 0,
+      "productive_s": 13630,
+      "date": "2026-10-10",
+      "source": "run by ToolsEnabled",
+      "exploratory": true
+    },
+    {
+      "name": "exploratory/gpt-6-astra",
+      "model_label": "GPT-6-Astra",
+      "client": "Codex CLI",
+      "variant": "V1",
+      "points": 15,
+      "s_partial": 0.416667,
+      "s_full": 0,
+      "penalty_s": 1404,
+      "productive_s": 16190,
+      "date": "2026-10-10",
+      "source": "run by ToolsEnabled",
+      "exploratory": true
+    },
+    {
+      "name": "exploratory/gpt-6-luna",
+      "model_label": "GPT-6-Luna",
+      "client": "Codex CLI",
+      "variant": "V1",
+      "points": 13,
+      "s_partial": 0.361111,
+      "s_full": 0,
+      "penalty_s": 14970,
+      "productive_s": 15230,
+      "date": "2026-10-10",
+      "source": "run by ToolsEnabled",
+      "exploratory": true
+    },
+    {
+      "name": "exploratory/gpt-6.1-sol",
+      "model_label": "GPT-6.1-Sol",
+      "client": "Codex CLI",
+      "variant": "V1",
+      "points": 3,
+      "s_partial": 0.083333,
+      "s_full": 0,
+      "penalty_s": 12012,
+      "productive_s": 13280,
+      "date": "2026-10-10",
+      "source": "run by ToolsEnabled",
+      "exploratory": true
+    }
+  ]
+}
