@@ -1,0 +1,1759 @@
+               Evaluating AI Agents on a Head-Gasket Repair Procedure
+                         Joshua Pinckard · ToolsEnabled, Inc.
+                                       October 2026
+
+                             Contact: support@toolsenabled.ai
+
+Text and figures of this report: CC BY 4.0. Benchmark code: MIT licence, released separately.
+                                                     Abstract
+
+         Can an AI agent carry out a mechanical repair, rather than only describe one? We present
+
+a head-gasket replacement benchmark built on a detailed CAD model of a 1990s 1.6-litre SOHC
+
+inline-four engine. Working through tool calls, the agent must look up the service specifications,
+
+dismantle the engine in an order the geometry allows, measure the head, block and bolts, choose
+
+the correct parts, tighten the head bolts in the specified stages and sequence, and reassemble the
+
+engine. We adopt TheAgentCompany’s full and partial completion formulas without
+
+modification; our checkpoints are binary and checked by deterministic code. As a domain-
+
+specific cost, every action is also charged an estimated technician time, so mistakes and repeated
+
+work carry a labour cost. In exploratory runs, one per model on the standard job, no agent
+
+completed the repair fully correctly. GPT-6-Astra reached the highest partial score, 41.7% (15 of
+
+18 checkpoint points), with all ten head bolts tightened correctly and 1,404 seconds of penalty
+
+time. GPT-6-Luna scored 36.1%. GPT-6.1-Sol scored 8.3% and left the engine disassembled.
+
+The most common failures were repeated work, repeating requests the environment had refused,
+
+and finishing with parts not refitted. These are single runs; they describe behaviour and do not
+
+rank the models.
+
+Model names are as requested from the provider at xhigh reasoning effort; the serving system did not attest the
+model identity.
+
+                                                 1 Introduction
+
+         A correct repair depends on decisions made along the way. A bolt tightened to the final
+
+value can still have an incorrect stage history. A head cannot be removed through an obstruction
+
+merely because its final pose is legal. A plausible written procedure does not show that an agent
+
+can maintain these constraints while acting.
+
+         We study a head-gasket replacement on a real 1990s 1.6 L SOHC inline-four. The agent
+works through tools against a detailed CAD-based engine model on a prepared service stand. The
+
+surrounding vehicle is outside the task. Specifications must be found in the service-information
+
+corpus rather than supplied in the task prompt. This benchmark follows Engine Bench
+
+(https://toolsenabled.ai/bench/, code at https://github.com/ToolsEnabled/engine-bench) and uses
+
+the same engine model: Engine Bench asks an agent to build the engine, and this benchmark asks
+
+it to repair one.
+
+        We follow TheAgentCompany’s organization and aggregate scoring [1]. Our contribution
+
+is the repair application: an environment where part identities, access, measurements, tightening
+
+stages and assembly completeness matter jointly. We do not propose a new scoring formula or
+
+statistical method. Technician time adds a domain-specific cost alongside computational cost.
+
+        The report distinguishes the task specification from supported software behavior and
+
+physical qualifications. Current results describe exploratory standard-job trajectories; the larger
+
+comparative collection remains pending. Historical scripted references and model attempts retain
+
+their actual rules and evaluator versions.
+
+
+                    2 Benchmark desiderata and comparison to other benchmarks
+
+        The benchmark should require consequential actions, preserve intermediate state, and
+
+provide an inspectable basis for every score. An agent should be able to discover the information
+
+needed to act, and the evaluator should distinguish an incorrect repair from an unavailable
+
+measurement or an apparatus failure.
+
+        TheAgentCompany evaluates professional work through workplace tools and simulated
+
+colleague conversations, combining full completion with intermediate checkpoints. We adapt its
+
+reporting structure to a component-level repair procedure. The contribution is this application
+
+and its task specification, rather than a new evaluation method [1].
+       ScienceWorld links scientific knowledge to actions in a text simulation. SimulCost
+
+studies accuracy and computation cost in solver tuning. CompMat-Bench grades materials-
+
+research inputs and outputs, while its longer workflows also execute calculations. ReFract tests
+
+action trajectories against role-specific boundaries. DeepTest tests automotive information
+
+retrieval for omitted warnings. These settings illuminate different aspects of procedural work;
+
+their scores measure different targets and are not directly comparable [2] [11] [12] [13] [14].
+
+       Evaluation practice also shapes the design. AI Agents That Matter motivates cost-
+
+controlled comparisons, suitable holdouts and reproducible evaluation. The Agentic Benchmark
+
+Checklist distinguishes task validity from outcome validity. Harness-disclosure work makes the
+
+execution configuration part of the experimental condition, while the double-measurement study
+
+shows why evaluator truth and scaffold ownership require separate scrutiny. These sources
+
+motivate explicit task predicates, isolation, configuration disclosure and accounting for
+
+unavailable observations [3] [4] [5] [6].
+
+       Our desiderata are a documented service procedure, separate component identities,
+
+geometry-based access, stateful tool actions, task-specific deterministic checks, and reproducible
+
+initial conditions. Difficulty should arise from the job rather than hidden specifications or
+
+arbitrary tool failures. Missing service limits and unresolved access must remain visible.
+
+
+                                            3 Environment
+
+       The game presents a prepared engine, tools, replacement supplies and service
+
+information. The interface supports looking, inspection, measurement, service search, removal,
+
+installation, cleaning, replacement, tightening, timing checks and final submission. Every action
+
+refers to a specific target; attempts and state changes are recorded separately.
+
+       CAD bodies retain individual identities. A service-body index links procedure names to
+geometry, but a display or index entry alone does not prove that a part can be withdrawn.
+
+Geometry and access checks must determine permitted removal order. Unknown constraints
+
+cannot be interpreted as permission.
+
+       Clamp mechanics provide state changes and observations such as bolt stretch, gasket
+
+condition and local clamp response. Unloaded service flatness is supplied or measured state;
+
+loaded head bow and bolt stretch are model responses. Available models include idealized
+
+material and contact behavior. These models support environment realism within their stated
+
+scope; they are not a full engine simulation or a validation of service life.
+
+       Neither a soak nor an engine run is part of scoring. The earlier operating-soak approach
+
+was dropped because the intended outcome is completion of the repair procedure against a
+
+correct reference. This is a design decision, not an engine-durability result.
+
+
+                                           4 Task structure
+
+       Each task comprises an instruction, a fixed starting state, a service corpus, weighted
+
+checkpoints and a deterministic evaluator. The proposed evaluator will read the final state and
+
+chronological action record. Binary checkpoint decisions will expose the supporting observations
+
+and the reason for each failed check.
+
+       The agent is asked to complete the repair, not to reproduce an answer string. The correct
+
+scripted baseline supplies the reference procedure and must satisfy every checkpoint. It defines
+
+100% reference accuracy; that requirement is distinct from the complete original-rule references
+
+reported separately and from validation under the amended rules.
+
+
+                                        4.1 Evaluation metrics
+
+       Following TheAgentCompany, full completion is S_full = 1 if every checkpoint passes,
+
+and 0 otherwise. Partial completion is S_partial = 0.5 × (points earned / total points) + 0.5 ×
+S_full [1].
+
+        The aggregate formula is used unchanged. This application uses binary deterministic
+
+checkpoints. The template also permits partial credit within checkpoints and LLM evaluation for
+
+some tasks; those mechanisms are not used for the proposed repair checks [1].
+
+        Success is mean S_full and Score is mean S_partial. Steps counts model calls, not tool
+
+calls. API-equivalent Cost is prompt tokens multiplied by the prompt-token rate plus completion
+
+tokens multiplied by the completion-token rate, under the template’s no-caching convention.
+
+Token counts, rate date, model identity and currency must be reported. A subscription fee is not
+
+an API price; unavailable rates or model-call counts remain unavailable [1].
+
+        Technician time is the sum of cited action charges and mistake-correction charges,
+
+reported as productive and penalty components beside the scripted baseline. It is charged time,
+
+not a measured mechanic’s elapsed time or a simulated delay. Mistakes by type, agent wall time
+
+and tool calls are additional measures.
+
+        Secondary measures include each of the ten head bolts’ condition, both torque stages and
+
+sequence position, plus checkpoint pass rates and failure categories. The explicit head-bolt group
+
+defines the denominator; covers and other fasteners do not enter it.
+
+
+                                             4.2 Workflow
+
+        Initialization restores the declared starting state, selects the variant, verifies the
+
+environment and evaluator versions, and starts the isolated collector. The task prompt identifies
+
+the job; the service corpus supplies specifications. Execution records each tool request, response,
+
+state transition and charge. Finalization evaluates the repair and preserves the complete report.
+
+        An end report is required after normal submission, budget exhaustion, early stopping,
+
+interruption or an apparatus refusal. It retains observed fields and named unknowns. Calling
+finish does not by itself establish complete or correct work. Earlier mistakes remain in the action
+
+record; the checkpoint specification must state how later corrections affect final accuracy and
+
+charged corrective work.
+
+
+                             Environment and workflow overview
+
+
+
+
+Figure 1. Proposed evaluation workflow. Tool observations and actions connect the agent to the
+engine state; the evaluator uses component state and ordered history. Dashed flow denotes usage
+telemetry. A complete reference procedure and collector remain requirements for study runs.
+
+                                         5 Task creation
+
+       The draft task set varies the condition of the same repair problem rather than introducing
+unrelated jobs. It includes a standard job, a stretched bolt, a warped head, an incorrect gasket
+
+among available parts, and a worn timing belt. Each variant needs a realizable starting state,
+
+appropriate observations, a correct baseline and a tested evaluator before use.
+
+       Checkpoint curation follows the service procedure. It covers lookup, disassembly, timing
+
+preparation, loosening, cleaning, measurement, part choice, tightening and reassembly. Point
+
+values express task importance. They must be reviewed and frozen before collecting comparative
+
+runs; they must not be tuned to a model ranking.
+
+       The historical per-operation labor table consists of analyst estimates and charges
+
+successful actions only. Later scripted reports include corrective penalties, also as analyst
+
+estimates. Neither establishes the cited professional action-time and correction schedule required
+
+by the new design. Labor sources, charge units and rules for blocked attempts and rework remain
+
+to be established.
+
+       The earlier snapshot did not demonstrate the full task set. Later original-rule records
+
+contain complete references for every configured primary variant, including a software head-
+
+machining route and a separate head-replacement alternative. These records do not establish
+
+physical machining, exact service applicability or completion under the amended rules. Selected
+
+component transitions must remain bound to their actual runtime and configuration.
+
+       Each task should specify the starting component condition, the information visible to the
+
+agent, permitted service actions and the state or history evidence needed for every checkpoint.
+
+For each proposed variant, a reference procedure should demonstrate that the task is feasible
+
+under the same tool contract. Review should cover correct completion, plausible incorrect
+
+completion and unavailable measurements before model collection. The current task variants are
+
+design requirements; legacy fixture names do not establish their implementation.
+                                        6 Baseline agents
+
+       The planned agent is Codex CLI with only the environment’s MCP tools, run through an
+
+isolated collector. The planned model arms are GPT-6.1-Sol, GPT-6-Astra and GPT-6-Luna. A
+
+Claude arm is a possible later extension.
+
+       The scripted correct repair is the environment reference, not a competing language
+
+model. It must execute the intended job with valid access and actions and satisfy the complete
+
+checkpoint set. Deliberately incorrect jobs test evaluator sensitivity to wrong order, wrong
+
+torque, omitted stages, incorrect parts, missed measurements and timing errors.
+
+       The exploratory run budget and earlier attempts remain in the accounting. Actual
+
+standard-task observations are reported below; the larger model-by-variant matrix remains
+
+pending. Requested and served model identifiers, transport refusals and stopping states retain
+
+their recorded meanings.
+
+       Report requested and returned model identifiers separately, with agent version, prompt,
+
+decoding controls, budgets, tools, context handling and retry policy. A configured model name
+
+does not prove the served model. Tool transport or process-cleanup fixtures do not establish
+
+production collection behavior [5].
+
+       An agent condition consists of the model and its execution harness. The collection record
+
+should specify the declared model version, inference settings, instructions, context policy, tools,
+
+stopping rule and retries. Conditions should receive the same task information and evaluation
+
+contract. Complete original-rule references are separate from the earlier incomplete diagnostics.
+
+References under the amended rules still need their own validation. Scripted usage fields and
+
+unavailable model telemetry must retain their recorded meanings [5].
+7 Experimental results
+Table 1. Experimental results
+Agent             Model                    Success     Score       Points (of   Steps     Cost      Technician time, s (productive +          Mistakes
+                                                                   18)                              penalty)
+
+Scripted          n/a                      100%        100%        18           n/a       n/a       13,630 + 0                                0
+reference
+
+Codex CLI         GPT-6-Astra              0%          41.7%       15           n/a*      n/a*      16,190 + 1,404                            30
+
+Codex CLI         GPT-6-Luna               0%          36.1%       13           n/a*      n/a*      15,230 + 14,970                           309
+
+Codex CLI         GPT-6.1-Sol              0%          8.3%        3            n/a*      n/a*      13,280 + 12,012                           245
+* The collector did not expose model-call counts, and no API-equivalent prices were applied; tool calls and token counts are in Appendix F.
+        Table 1 reports one exploratory run per model on the standard job (V1), with the scripted reference for comparison. No run
+
+achieved full completion. GPT-6-Astra finished the job in 528 tool calls and lost three points: two for attempting to remove a timing-
+
+cover screw that was still held (CP02), and one for an extra head-bolt loosening pass (CP04). Its technician time was 17,594 seconds,
+
+of which 1,404 were penalties, against 13,630 seconds for the reference. GPT-6-Luna also finished, but its penalties (14,970 seconds)
+
+nearly equalled its productive time. It lost points for blocked removals, a missed cleaning step before the final gasket placement, and
+
+fasteners and connectors not refitted. GPT-6.1-Sol did not finish: after using its only replacement gasket and later removing it, it could
+
+not complete the repair and left the head, gasket and bolts off the engine. Under the current version of the independent scorer, the two
+
+scorers agree on every checkpoint and every time charge for all three runs. An earlier version differed by 30 seconds on GPT-6.1-Sol
+
+because it did not classify one gasket refit; this was corrected (Appendix F). With one run per model, these figures describe individual
+
+runs; they are not estimates of model performance.
+7.1 Common failures
+
+(a) Repeated and excess work
+       Repeated work accounted for 213 operations and 10,350 penalty seconds for GPT-6.1-
+
+Sol, 15 operations and 630 seconds for GPT-6-Astra, and 191 operations and 9,840 seconds for
+
+GPT-6-Luna. Sol and Astra each loosened the ten head bolts in four passes instead of three. Their
+
+extra passes—Sol 220–229 and Astra 240–249—each added 420 seconds and lost CP04's one
+
+point. Luna removed the head and fitted the gasket again at 692–693; both operations were
+
+charged as repeated work.
+
+
+(b) Repeating refused requests without changing the repair
+       GPT-6-Luna made 40 consecutive restoration requests at 424–463, receiving the same
+
+refusal every time: "Restore attachments after all selected service positions are installed". The
+
+requests targeted different fasteners, but no parts were refitted between them to meet that
+
+requirement. This block cost 1,200 seconds. All 43 restoration refusals were included in Luna's
+
+110 invalid actions, charged 4,890 seconds overall. The refusal named the unmet requirement but
+
+not the missing parts; the next environment version adds the requested item and the number of
+
+parts not yet refitted.
+
+
+(c) Parts and consumables
+       GPT-6.1-Sol discarded the old gasket at 276, then fitted its only new gasket at 327 by
+
+installing it directly from stock rather than through the replace action, which records a new part
+
+as the replacement for the original. Later replace requests at 438 and 661 both returned
+
+"Replacement supplies unavailable". The procedure does not refit a multi-layer steel gasket once
+
+removed, so removing it at 660 left Sol with no usable gasket.
+
+
+(d) Order-of-work requirements
+       GPT-6-Astra released a timing-cover screw at 112, then tried to remove it at 113 while
+
+the crank pulley was still in place, blocking the screw's withdrawal route. The refusal cost 30
+seconds and CP02's two points. Sol's three blocked removals and Luna's seven similarly cost 90
+
+and 210 seconds, with CP02 unmet in both runs. Separately, Luna removed the head at 692 and
+
+placed the final gasket at 693 without cleaning in between. Earlier cleaning at 355–358 did not
+
+meet this requirement; CP05 lost one point.
+
+
+(e) Finishing with work outstanding
+        GPT-6-Luna submitted finish at 807 with 100 fastener and connector restorations still
+
+outstanding. It failed the two-point final-reassembly check, CP12, and received a further 30-
+
+second missing-restoration charge. GPT-6.1-Sol never submitted finish: after 659–660, the head,
+
+gasket and all ten head bolts remained in the tray. Its final state failed the five two-point
+
+completion checks, CP08–CP12, despite earlier successful tightening at 339–358.
+
+       The final scores were 3/18 for GPT-6.1-Sol, 15/18 for GPT-6-Astra and 13/18 for GPT-6-
+
+Luna. Penalty totals were 12,012, 1,404 and 14,970 seconds respectively, agreed by the current
+
+version of both scorers. The earlier independent scorer recorded 11,952 penalty seconds for Sol
+
+(Appendix F). These examples show how repeated work, unmet prerequisites and incomplete
+
+reassembly accumulated costs even when individual repair operations succeeded.
+
+
+
+
+                               8 Implications and future directions
+
+       A repair environment can test whether an agent uses information while maintaining a
+
+changing physical-state model. The application extends a professional-task benchmark pattern
+
+into mechanical procedure execution through software tools. Its value depends on accurate task
+
+constraints and evaluators, not on adding a new aggregate score. Engine Bench and this
+
+benchmark share one engine model and together cover building the engine and repairing it; both
+
+are published at https://toolsenabled.ai/bench/, with code at
+https://github.com/ToolsEnabled/engine-bench.
+
+       Future work should complete the service-to-geometry mapping, validate references under
+
+the amended rules, validate the technician-time estimates against published labour-time guides
+
+and extend the original-rule software checks to the selected collection runtime. Collected
+
+trajectories can then support analysis of procedural decisions and resource use. Broader tasks and
+
+physical execution require separate evidence.
+
+       The benchmark does not certify that an agent or robot can safely repair an engine. It
+
+omits the surrounding vehicle, workshop dexterity and many material uncertainties.
+
+ToolsEnabled, Inc. develops the environment and authors this report; this relationship should be
+
+considered when interpreting the design. The exploratory attempts do not establish comparative
+
+population performance.
+References
+[1] Xu, Frank F. et al.. TheAgentCompany: Benchmarking LLM Agents on Consequential Real World Tasks. 2025.
+arXiv v3. https://arxiv.org/abs/2412.14161v3
+[2] Wang, Ruoyao et al.. ScienceWorld: Is your Agent Smarter than a 5th Grader?. 2022. arXiv v2.
+https://arxiv.org/abs/2203.07540v2
+[3] Kapoor, Sayash et al.. AI Agents That Matter. 2024. arXiv v1. https://arxiv.org/abs/2407.01502v1
+[4] Yuxuan Zhu et al.. Establishing Best Practices for Building Rigorous Agentic Benchmarks. 2025. arXiv v5.
+https://arxiv.org/abs/2507.02825v5
+[5] Yunbei Zhang et al.. Stop Comparing LLM Agents Without Disclosing the Harness. 2026. arXiv v1.
+https://arxiv.org/abs/2605.23950v1
+[6] Yonghong Zhang et al.. The Double Measurement Confound in Agent Benchmarks: De-Scaffolding, Ground-
+Truth Scoring, and Reliability Beyond the Mean. 2026. arXiv v1. https://arxiv.org/abs/2609.09218v1
+[7] Wei-Jung Huang. How Many Tasks Are Enough for Agent Benchmark Decisions? A Replay Analysis of Public
+LLM Agent Benchmarks. 2026. arXiv v1. https://arxiv.org/abs/2607.12338
+[8] Zairah Mustahsan et al.. Stochasticity in Agentic Evaluations: Quantifying Inconsistency with Intraclass
+Correlation. 2025. arXiv v1. https://arxiv.org/abs/2512.06710
+[9] Evan Miller. Adding Error Bars to Evals: A Statistical Approach to Language Model Evaluations. 2024. arXiv
+v1. https://arxiv.org/abs/2411.00640
+[10] Ke Zhang et al.. Understanding Tool-Augmented Agents for Lean Formalization: A Factorial Analysis. 2026.
+arXiv v1. https://arxiv.org/abs/2604.16538
+[11] Yadi Cao et al.. SimulCost: A Cost-Aware Benchmark and Toolkit for Automating Physics Simulations with
+LLMs. 2026. arXiv v4. https://arxiv.org/abs/2603.20253v4
+[12] Chenmu Zhang et al.. CompMat-Bench: Benchmarking AI Agents for Computational Materials Science. 2026.
+arXiv v1. https://arxiv.org/abs/2610.00636v1
+[13] Hainiu Xu et al.. ReFract: Benchmarking Perspective Awareness in Language Model Agents with Text World
+Models. 2026. arXiv v1. https://arxiv.org/abs/2610.03356v1
+[14] Lev Sorokin et al.. DeepTest Tool Competition 2026: Benchmarking an LLM-Based Automotive Assistant.
+2026. arXiv v1. https://arxiv.org/abs/2604.12615v1
+[15] St. Paul Foundry. 356.0 Aluminum Silicon Magnesium Technical Data Sheet. n.d..
+https://www.stpaulfoundry.com/AlloySpecs/alloy_specifications_data_page.aspx?id=356.0
+[16] Raúl Radovitzky. Computational Mechanics of Materials: Variational Formulation and Rayleigh-Ritz Methods.
+2003. https://ocw.mit.edu/courses/16-225-computational-mechanics-of-materials-fall-2003/resources/lesson__13/
+[17] Richard T. Barrett. Fastener Design Manual. 1990.
+https://ntrs.nasa.gov/api/citations/19900009424/downloads/19900009424.pdf
+Appendix A. Benchmark comparison
+Selected task environments and evaluation targets. This descriptive comparison adapts the benchmark-comparison organization of TheAgentCompany to a
+narrower repair application; it is not a reproduction of its feature table or a ranking [1].
+Table 2. Appendix A. Benchmark comparison
+Benchmark                  Task and interaction                           Evaluation target                           Distinction for this application
+
+TheAgentCompany            Professional tasks across workplace tools,     Full completion and weighted intermediate   Provides the reporting structure; colleague
+                           with simulated colleague conversations         checkpoints; evaluators include             interaction differs from repair-tool interaction
+                                                                          programmatic checks and language-model
+                                                                          judgments
+
+ScienceWorld               Elementary science procedures in a text        Required goals and optional progress        Connects knowledge to state-changing
+                           simulation                                     subgoals, with task variations              actions; spatial and physical models are
+                                                                                                                      deliberately simplified
+
+SimulCost                  Parameter selection and iterative tuning       Accuracy thresholds and simulation cost     Separates tool computation cost from
+                           through physics solvers                        relative to a scan reference                inference cost; technician time is a different
+                                                                                                                      application quantity
+
+CompMat-Bench              Materials-research input preparation, output   Fixed checks against reproduced research    Workflow agents also run calculations; the
+                           analysis and calculation workflows             results; single tasks use precomputed       target is research reproduction rather than
+                                                                          expensive simulations                       equipment repair
+
+ReFract                    Role-conditioned action trajectories in        Goal attainment, role-boundary compliance   Tests declared capability and knowledge
+                           executable text world models                   and call efficiency                         boundaries in a closed simulation; it does not
+                                                                                                                      establish physical equipment consequences
+
+DeepTest                   Generated requests to automotive manual-       Warning omissions, failure-revealing test   Evaluates testing tools and information
+                           retrieval assistants                           coverage and an LLM-based oracle            reliability rather than executed repair
+                                                                                                                      procedures
+
+Proposed repair            Component inspection, part selection and       Binary weighted checkpoints, full           Application design with unresolved service
+application                ordered service actions through an             completion, inference cost and charged      and evaluator details; comparative model
+                           environment interface                          technician time                             results are pending
+Sources: [1] [2] [11] [12] [13] [14]. Selected scopes do not imply equal difficulty. Colleague conversation, physical-model computation and repair-tool actions
+are distinct interactions.
+Appendix B. Environment and engine model
+
+The service-body index contains 1240 selected body rows. Individual bodies remain distinct,
+including hardware candidates and contextual geometry. The mapping provides a basis for task-
+specific access checks; it is not proof of a complete legal disassembly route.
+Table 3. Appendix B. Environment and engine model
+
+Tool group               Role in the repair
+
+look / inspect /         Expose visible state and permitted component measurements.
+measure
+
+search_service_info      Retrieve specifications from the task corpus.
+
+remove / install         Change component placement under access and dependency constraints.
+
+clean / replace          Change preparation state or exchange an identified component.
+
+torque /                 Record ordered tightening and timing checks.
+check_timing
+
+finish                   Submit the final state; revised evaluator integration remains to be
+                         demonstrated.
+The inherited interface includes a historical operating-harness endpoint. Its action signatures can
+support the revised design, but its previous finish behavior is not evidence of the new checkpoint
+evaluator.
+The service corpus distinguishes published service information, private source references,
+benchmark procedure choices and estimates. Selected torque transcriptions differ, reuse limits
+are incomplete, and gasket orientation and dowel fit need explicit support. Those gaps must be
+resolved or declared before a task can claim a determinate correct answer.
+The environment exposes component observations and state-changing actions through an
+interface. Existing software demonstrations support component identity and selected action
+behavior. The engine display supplies geometric context, while the mechanical models make
+finite, assumption-dependent predictions. A complete display does not establish a usable service
+path, and a model response does not validate the service procedure. Material history, unloaded
+flatness and loaded deformation must be distinguished when defining measurements.
+
+Appendix B. Benchmark construction
+
+Construction links the service procedure to observable component state and permitted actions.
+The following review stages separate task feasibility from evaluator behavior; none substitutes
+for a completed reference run.
+Table 4. Appendix B. Benchmark construction
+
+Construction stage Evidence and review target
+
+Define the job           Starting component conditions, supplied tools and parts, visible
+                         information, terminal state and legitimate waste dispositions.
+
+Map service              Applicable specifications, measurement units, tightening stages and
+information              sequence, reuse and replacement decisions; unresolved limits remain
+                         explicit.
+
+Map components           Stable body and fastener identities, access dependencies, state changes,
+and actions              refused actions and observations available to the agent.
+
+Curate checkpoint        Final-state and history predicates, weights, unavailable evidence,
+evidence                 correction rules and failure explanations.
+
+Exercise reference       Feasible correct execution plus controlled departures that test evaluator
+and faulty jobs          sensitivity; keep software diagnostics distinct from model performance.
+
+Freeze collection        Task, service corpus, geometry, evaluator, agent harness, budgets,
+configuration            telemetry and charge schedule fixed before comparative collection.
+Reviewers should inspect a complete example from instruction through final report. Changing a
+service threshold, active component identity or evaluator condition changes the task definition
+and requires a new reviewed configuration. Historical software tests remain tied to the versions
+they exercised.
+The factory-style path lifts a mapped rocker assembly of 109 bodies with 15 bolts retained in that
+group. It requires 14 releases of head threads and 16 adjuster backoffs; the camshaft remains
+installed and needs independent support. A full-strip path remains a valid alternate. Group
+retention, support and unobstructed withdrawal retain provisional geometric qualifications.
+For the default fixture, the grouped route has 162 removal operations and 51 moving groups,
+compared with 185 operations and 71 groups for the full-strip route. Both restore 626 removed
+positions and retain 614 bodies. Alternative stay choices carry their own checklists. These are
+removal-fixture counts, not complete repair action counts or technician seconds; neither path is
+physical service validation.
+Appendix B. Engine geometry
+
+
+
+
+Figure 2. Lubrication component representation. Separate bodies and their context are preserved.
+This view does not establish an unobstructed service path. In the source render the vertical-axis
+label overlaps one tick label; the illustration is reproduced without alteration.
+Figure 3. Integrated engine display. The original component geometry is shown without
+changing its body identities. Display completeness does not resolve all access and intersection
+questions.
+
+Appendix B. Mechanical assumptions
+
+The mechanical model links bolt loading, gasket compression and head response. The historical
+rigid model and later elastic plate approximation have different scopes. A linear elastic
+mechanical plate with a yield exclusion must not be described as a model of permanent head
+deformation.
+Separate generic material-law work carries gasket recovery, bolt stretch and sectional material
+history. Its parameters and applicability are not selected-part validation. Finite order comparisons
+show that an action history can affect transient component response; they do not establish lasting
+damage, reliable repair classification or engine durability.
+Material proxies, contact reduction and finite comparison limits remain explicit. Mechanical
+state is used to make inspection and measurement meaningful. Checkpoint correctness is
+determined by the reference procedure and recorded work, without operating the engine.
+Appendix B. Finite component illustration
+
+
+
+
+Figure 4. Finite component-model predictions retained as an illustration of mechanical assumptions. The dashed inherited-model
+reference does not validate the added plate model. Recovery and material properties are estimates. Positive margins for incorrect
+command sequences are not evidence of a correct repair.
+Appendix C. Task and checkpoint details
+
+These variants are a draft task set. All checkpoints retain their normal meaning when an
+abnormal condition is absent. Variant identifiers are task labels, not observed samples.
+Table 5. Appendix C. Task and checkpoint details
+
+Variant                   Required decision
+
+V1 standard job.          Nothing abnormal.
+
+V2 stretched bolt.        One head bolt is beyond the reuse limit and must be found by
+                          measurement and replaced.
+
+V3 warped head.           The head is beyond the flatness limit and must be measured and sent for
+                          machining, or replaced, before reassembly.
+
+V4 wrong gasket           The parts available include an incorrect gasket next to the correct one.
+offered.
+
+V5 worn timing belt. The timing belt must be inspected and replaced.
+Original-rule references cover the warped-head and worn-belt configurations, with a separate
+head-replacement alternative. This supports the recorded software cases rather than physical
+machining or part-fit validation. Component identity, condition and timing transitions must be
+reviewed against the exact amended runtime before comparative collection.
+A proposed wrong-gasket task offers a specified incorrect gasket alongside the correct
+replacement. The agent must inspect the assembly, identify the required replacement and
+complete the applicable service sequence. A final declaration alone cannot demonstrate part
+identity or ordered torque stages; checkpoint evidence must come from component state and
+action history. Reassembly checks should distinguish legitimate replacement and disposal from
+an absent required component. This example illustrates the proposed evaluation contract and is
+not an observed agent run.
+Appendix C. Signed checkpoint requirements
+Table 6. Appendix C. Signed checkpoint requirements
+
+Checkpoint       Required evidence                                                           Points
+
+1                Torque values, both stages and the sequence were retrieved from the         1
+                 service information before the first tightening of any head bolt.
+
+2                Disassembly followed the documented removal policy. Any refused             2
+                 removal attempt of a part that was still blocked or still attached fails
+                 CP02, and is also counted as a mistake.
+
+3                Before the timing belt came off: cylinder 1 at TDC and the timing           1
+                 marks aligned, confirmed by a check observation.
+
+4                Head bolts loosened in the specified order and stages before head           1
+                 removal. The agent must use one complete documented sequence,
+                 either the factory diagram order (10, 9, 8, 7, 6, 3, 4, 5, 2, 1) or exact
+                 reverse (10 to 1), consistently across all loosening passes.
+
+5                After the head and the old gasket were removed, and before the new          1
+                 gasket was placed: both mating surfaces cleaned.
+
+6                Head and block flatness both measured and compared with the service         1
+                 limit before the head was installed. The decision is correct for the
+                 variant: V3 machine or replace the head; otherwise reuse it.
+Appendix C. Signed checkpoint requirements continued
+Table 7. Appendix C. Signed checkpoint requirements continued
+
+Checkpoint        Required evidence                                                                     Points
+
+7                 Every head bolt measured against the reuse limit before its keep-or-                  1
+                  replace decision, and the decision is correct: V2 replace the stretched
+                  bolt; otherwise keep.
+
+8                 A new, correct head gasket (75 mm bore, 0.762 mm MLS) installed in                    2
+                  the correct orientation with the dowels aligned. V4: installing the 78
+                  mm / 1.2 mm part fails.
+
+9                 Final state: all ten bolts carry a valid stage-1 torque at the specified              2
+                  value, applied in the specified sequence.
+
+10                Final state: all ten bolts carry a valid final-stage torque at the specified          2
+                  value, applied in the specified sequence after stage 1.
+
+11                Timing restored: marks aligned and belt tensioned, confirmed by a                     2
+                  successful check after the belt was reinstalled. V5: a new belt.
+
+12                Reassembly complete: every removed part and every released fastener                   2
+                  or attachment restored, or properly superseded by its replacement, per
+                  the documented restoration checklist. The sources make a new head
+                  gasket mandatory, but for the valve-cover gasket they describe
+                  inspection, reuse when serviceable, and sealant treatment. CP12
+                  therefore requires a new head gasket (unchanged), and either a new
+                  valve-cover gasket or the original inspected and refitted with sealant as
+                  the manual describes. The earlier "both new" rule was a benchmark
+                  policy, not a manual requirement, and is withdrawn.
+Total available points: 18. Each checkpoint is binary, and all checkpoints remain applicable to
+every task. A correct normal-condition decision can pass a measurement checkpoint without
+replacing the part.
+The current amendments accept either documented loosening sequence, used consistently across all loosening
+passes, and withdraw the unconditional new cover-gasket policy. The new head gasket remains mandatory.
+Reassembly restores required components with legitimate replacement and waste dispositions. Final-state
+corrections may recover credit; chronological process violations and charges remain recorded. Historical commands
+and reports retain their original source versions.
+Appendix C. Engineering specifications — H01 to H05
+
+The complete specification table distinguishes public-source support from benchmark policy. The captured public workshop manual
+identifies its first edition as 9/91. Exact reconstructed-hardware applicability and later manual supplements remain unverified. Policy
+rows make no factory-value claim. Every source disagreement and row scope is retained below. The table records the earlier
+checkpoint amendment; the current requirement to use one chosen loosening sequence across all passes appears in the checkpoint
+table above. Full original fields, source URLs and implementation locators accompany the report.
+Table 8. Appendix C. Engineering specifications — H01 to H05
+Specification            Benchmark value and scope                 Basis and public-source value            Selection and disagreement or limit
+
+H01: First complete      30 N m; active benchmark                  public source-supported; M|S2; 30; M 6- Selected two-stage related-application
+torque pass                                                        54; S2 torque steps                     procedure
+
+H02: Final complete      73 N m; active benchmark                  public source-supported; M|S2; 73; M 6- Retain matching workshop and fastener-
+torque pass                                                        54; S2 torque steps                     sheet value S1 related article converts
+                                                                                                           final torque to72 Nm; other engine
+                                                                                                           variants use different procedures.
+
+H03: Tightening stages   2 complete passes; active benchmark       public source-supported; M|S2; 30        Each pass completes all ten positions
+                                                                   then73; M 6-54; S2 steps                 before the next This is installation
+                                                                                                            stage2, not later thermal-service
+                                                                                                            retorque.
+
+H04: Number of service 10 bolts; active benchmark                  public source-supported; M|S2; 10; Head Selected service layout
+positions                                                          torque diagram
+
+H05: Tightening          1,2,3,4,5,6,7,8,9,10 position sequence;   public source-supported; S2; ascending   Diagram numbering controls sequence
+position order           active benchmark                          numbered positions; Torque-order
+                                                                   diagram
+Appendix C. Engineering specifications — H06 to H10
+Table 9. Appendix C. Engineering specifications — H06 to H10
+Specification            Benchmark value and scope                 Basis and public-source value               Selection and disagreement or limit
+
+H06: Diagram row         upper:8,6,2,4,10; lower:9,3,1,5,7         public source-supported; S2; same two       Related diagram numbering Mapping
+layout                   positions; active benchmark               rows; Torque-order diagram                  diagram upper/left to runtime +Y/+X is
+                                                                                                               benchmark coordinate convention; exact
+                                                                                                               CAD landmark correspondence remains
+                                                                                                               unverified.
+
+H07: Retained scripted   10,9,8,7,6,5,4,3,2,1 position sequence;   benchmark policy choice; S1|M; S1           Preserve the exact recorded reference;
+loosening order          retained scripted reference; current      reverse instruction; M diagram differs at   Amendment 1 also admits the M
+                         acceptance listed in H24                  two lower-row positions; S1 head-           diagram order M loosening
+                                                                   removal prose; M 6-30 and6-54               upper:3,5,9,7,1; lower:2,6,10,8,4. This
+                                                                   diagrams                                    recorded reference is not the only
+                                                                                                               accepted CP04 sequence.
+
+H08: Loosening           -120 degrees/bolt/pass; active benchmark public source-supported; M|S1; one-third Negative API angle denotes loosening
+increment                                                         turn each pass; M 6-30; S1 printed       Fixed number of passes follows software
+                                                                  page16                                   engagement, not physical thread length.
+
+H09: Scripted initial    1 turn; active benchmark                  benchmark policy choice                     Finite procedural disengagement state
+engagement                                                                                                     Not derived from140 mm nominal bolt
+                                                                                                               length.
+
+H10: Initial reference   3 passes; active benchmark                benchmark policy choice                     Three one-third-turn passes release the
+loosening passes                                                                                               one-turn initial state
+Appendix C. Engineering specifications — H11 to H15
+Table 10. Appendix C. Engineering specifications — H11 to H15
+Specification            Benchmark value and scope              Basis and public-source value           Selection and disagreement or limit
+
+H11: New installation    2 turns; active benchmark              benchmark policy choice                 Discrete started-fastener state in fixture
+engagement                                                                                              path Source-defined initial_conditions
+                                                                                                        can override; not measured engagement.
+
+H12: Initial assembled   73 N m; active benchmark               benchmark policy choice; M|S2; 73;      Authored initial state initialized to final
+torque                                                          Related final tightening value          service value
+
+H13: Thread nominal      10 mm; active benchmark                public source-supported; S2; 10; 704.700 Related fastener dimension
+diameter                                                        bolt dimension
+
+H14: Thread pitch        1.25 mm; active benchmark              public source-supported; S2; 1.25;      Related fastener dimension
+                                                                704.700 bolt dimension
+
+H15: Nominal bolt        140 mm; active benchmark               public source-supported; S2; 140;       Related nominal part length Not a
+dimension                                                       704.700 bolt dimension                  measured free length or allowable reuse
+                                                                                                        limit.
+Appendix C. Engineering specifications — H16 to H20
+Table 11. Appendix C. Engineering specifications — H16 to H20
+Specification            Benchmark value and scope                Basis and public-source value            Selection and disagreement or limit
+
+H16: Lubrication         threads and washer bearing surface oiled public source-supported; M|S1; engine    Service preparation condition
+                         criterion; active benchmark              oil on threads and bearing faces; Head
+                                                                  installation
+
+H17: Replacement         0.1 mm extension; active benchmark       benchmark policy choice                  Deliberate measurable V2 decision
+threshold                                                                                                  boundary; no applicable numeric factory
+                                                                                                           reuse threshold established Replace
+                                                                                                           strictly above threshold; equality does
+                                                                                                           not trigger this rule. No failure-time
+                                                                                                           inference.
+
+H18: V2 supplied bolt    0.2 mm; active benchmark                 benchmark policy choice                  Authored fault exceeds0.1 mm
+extension                                                                                                  benchmark threshold
+
+H19: V2 service          3 position; active benchmark             benchmark policy choice                  Fixed variant instance makes the defect
+position                                                                                                   discoverable
+
+H20: Other/new bolt      0 mm; active benchmark                   benchmark policy choice                  Authored unworn/replacement state
+extension                                                                                                  Unknown measured free length must
+                                                                                                           remain unknown.
+Appendix C. Engineering specifications — H21 to C02
+Table 12. Appendix C. Engineering specifications — H21 to C02
+Specification            Benchmark value and scope               Basis and public-source value           Selection and disagreement or limit
+
+H21: Under-torque        50 N m; active benchmark                benchmark policy choice                 Scripted torque-value error relative to73
+control final target                                                                                     Nm
+
+H22: Wrong-order         reverse both passes criterion; active   benchmark policy choice                 Tests procedural ordering independent of
+control                  benchmark                                                                       force uniformity
+
+H23: Skipped-stage       omit complete73Nm pass criterion;       benchmark policy choice                 Tests missing final installation pass
+control                  active benchmark
+
+C01: Final torque        10 N m; active benchmark                public source-supported; M|S1; 10; M 6- Related service torque
+                                                                 56 cylinder-head-cover arrow; S1 printed
+                                                                 page52 Valve Cover
+
+C02: Intermediate        3,6 N m; active benchmark               benchmark policy choice                 Scripted gradual seating; no
+torque passes                                                                                            corresponding manual numerical steps
+                                                                                                         established
+Appendix C. Engineering specifications — C03 to C07
+Table 13. Appendix C. Engineering specifications — C03 to C07
+Specification             Benchmark value and scope             Basis and public-source value           Selection and disagreement or limit
+
+C03: Service position     5 bolts; active benchmark             benchmark policy choice                 Selected software service layout Original
+count                                                                                                   cover pattern not established by the cited
+                                                                                                        prose.
+
+C04: Tightening order     1,2,3,4,5 position sequence; active   benchmark policy choice                 Deterministic selected layout
+                          benchmark
+
+C05: Loosening order      5,4,3,2,1;3 passes of-120degrees      benchmark policy choice                 Symmetric procedural release rule Head-
+and steps                 sequence; active benchmark                                                    bolt one-third-turn instruction does not
+                                                                                                        establish this cover pattern.
+
+C06: Thread               6 / 1 mm; active benchmark            public source-supported; M; M 6x1.0; M Related cover fastener size
+diameter/pitch                                                  6-56 cylinder-head-cover fastener arrow
+
+C07: Nominal length       40 mm; active benchmark               benchmark policy choice                 Fixture fastener dimension
+Appendix C. Engineering specifications — C08 to S02
+Table 14. Appendix C. Engineering specifications — C08 to S02
+Specification             Benchmark value and scope                 Basis and public-source value            Selection and disagreement or limit
+
+C08: Initial assembled    10 N m; active benchmark                  benchmark policy choice; M; 10; Cover    Authored initial state uses final service
+torque                                                              installation                             value
+
+C09: Local oil and        oil tube seals; inspect for damage;       public source-supported; M|S1; local oil, Separate cover treatment from dry head
+sealant treatment         sealant at specified cam-holder corners   damage inspection and liquid-gasket       MLS gasket Reviewed instruction does
+                          criterion; active benchmark               treatment; M 6-55 step12 and application not establish unconditional new cover-
+                                                                    note; S1 printed page17                   gasket replacement.
+
+C10: Retained reference new distinct cover gasket criterion;        benchmark policy choice                  Preserve the replacement performed by
+replacement             retained scripted reference; current                                                 the recorded reference The original
+                        acceptance listed in C11                                                             mandatory both-new checkpoint rule is
+                                                                                                             withdrawn. Do not cite the mandatory
+                                                                                                             new HEAD gasket instruction as cover-
+                                                                                                             gasket evidence.
+
+S01: Head flatness        0.05 mm; active benchmark                 benchmark policy choice; M; 0.05 mm      Simplify related conditional service
+decision limit                                                      conditional resurfacing criterion;       guidance into one benchmark decision
+                                                                    Printed6-45                              Real resurfacing also depends on head
+                                                                                                             height and cam-holder clearances.
+
+S02: Block flatness       0.05 mm; active benchmark                 benchmark policy choice; M; 0.07 mm      Common stricter benchmark limit across
+decision limit                                                      standard;0.10 mm service; Printed7-12    both surfaces Do not label0.05 mm as
+                                                                                                             the public block service limit; S1
+                                                                                                             lists0.079 mm standard.
+Appendix C. Engineering specifications — S03 to S07
+Table 15. Appendix C. Engineering specifications — S03 to S07
+Specification             Benchmark value and scope             Basis and public-source value                Selection and disagreement or limit
+
+S03: Normal initial       0.02 mm; active benchmark             benchmark policy choice                      Authored standard-state measurements
+head/deck/cover
+flatness
+
+S04: V3 initial head      0.08 mm; active benchmark             benchmark policy choice                      Authored head exceeds benchmark0.05
+flatness                                                                                                     mm limit
+
+S05: Material removed     0.06 mm; active benchmark             benchmark policy choice                      Deterministic service-result stand-in
+by machine_head                                                                                              Eligibility does not model actual head
+                                                                                                             height or cam-holder geometry.
+
+S06: Post-service head    0.02 mm; active benchmark             benchmark policy choice                      Authored recovered state for machining
+flatness                                                                                                     or replacement
+
+S07: Normal/post-         0.5 um Ra; active benchmark           benchmark policy choice; S3; 50RA or         Declared surface state, not a conversion
+service roughness                                               finer; page does not state a unit; Surface   of the webpage number
+                                                                Finishing
+Appendix C. Engineering specifications — S08 to G01
+Table 16. Appendix C. Engineering specifications — S08 to G01
+Specification             Benchmark value and scope             Basis and public-source value            Selection and disagreement or limit
+
+S08: Abrasive-disc        5 um Ra; active benchmark             benchmark policy choice                  Authored adverse cleaning outcome No
+damage roughness                                                                                         calibrated tool-to-damage law.
+
+S09: Ready surface        clean; dry; undamaged; no debris      public source-supported; S3|S4; clean    Represent inspection conditions
+                          criterion; active benchmark           dry mating faces; avoid damaging         separately from loaded deformation
+                                                                preparation; MLS installation; surface
+                                                                preparation
+
+S10: Unprotected          1 count; active benchmark             benchmark policy choice                  Discrete penalty-state observation when
+cleaning debris                                                                                          openings are unprotected Not a measured
+increment                                                                                                particle-generation rate.
+
+S11: After-clean residue 0 fraction; active benchmark           benchmark policy choice                  Successful cleaning state transition No
+                                                                                                         cleaning kinetics simulated.
+
+G01: Correct selected     75 mm; active benchmark               benchmark policy choice; S6; 75.5 mm;    Study-design selected stock; B01
+bore                                                            C4251-030 catalog                        overrides related catalog The catalog
+                                                                                                         does not support75 mm as its part
+                                                                                                         dimension.
+Appendix C. Engineering specifications — G02 to G06
+Table 17. Appendix C. Engineering specifications — G02 to G06
+Specification            Benchmark value and scope                Basis and public-source value         Selection and disagreement or limit
+
+G02: Correct selected    0.762 mm; active benchmark               benchmark policy choice; S6; .030in   Selected stock definition agrees with
+compressed thickness                                              = .762 mm; C4251-030 catalog          related catalog thickness only
+
+G03: Correct selected    multilayer steel material type; active   benchmark policy choice; S6;          Study stock category; no selected
+construction             benchmark                                MLS;3layers; C4251-030 catalog        measured constitutive curve
+
+G04: Wrong offered       78 mm; active benchmark                  benchmark policy choice               Deliberately different V4 stock
+bore                                                                                                    identifier/dimension Not the historical2.5
+                                                                                                        mm offset profile.
+
+G05: Wrong offered       1.2 mm; active benchmark                 benchmark policy choice               Deliberately different V4 stock definition
+compressed thickness
+
+G06: Wrong offered       multilayer steel material type; active   benchmark policy choice               Authored wrong-stock material category
+construction             benchmark                                                                      Dimensions do not establish a measured
+                                                                                                        material curve.
+Appendix C. Engineering specifications — G07 to G11
+Table 18. Appendix C. Engineering specifications — G07 to G11
+Specification            Benchmark value and scope                 Basis and public-source value            Selection and disagreement or limit
+
+G07: Selected            up enum; active benchmark                 benchmark policy choice; M|S6; correct   Discrete orientation and dowel alignment
+orientation                                                        installation alignment; catalog None;    convention Catalog None does not
+                                                                   Head installation; catalog Orientation   certify either-face installation.
+                                                                   field
+
+G08: Sealant on          none; install dry criterion; active       public source-supported; S3; dry coated Apply general MLS installation guidance
+selected MLS             benchmark                                 MLS; no extra sealer; MLS Head Gasket
+                                                                   Installation
+
+G09: Replacement         new head gasket criterion; active         public source-supported; M|S1; new       Used gasket is removed/replaced
+                         benchmark                                 gasket; Head installation
+
+G10: Dowel alignment     all retained dowels installed; selected   benchmark policy choice; M; alignment    Discrete benchmark alignment
+                         orientation criterion; active benchmark   dowels; Head installation                observation No clearance or geometric
+                                                                                                            interference simulation.
+
+G11: Failed-cylinder     2 cylinder; active benchmark              benchmark policy choice                  Fixed starting defect metadata across
+identifier                                                                                                  variants No combustion or leak-time
+                                                                                                            simulation.
+Appendix C. Engineering specifications — T01 to T05
+Table 19. Appendix C. Engineering specifications — T01 to T05
+Specification             Benchmark value and scope               Basis and public-source value         Selection and disagreement or limit
+
+T01: Compression TDC 1 cylinder; active benchmark                 public source-supported; M|S1; No.1   Selected service datum
+cylinder                                                          compression TDC; M 6-62; S1p1
+
+T02: Compression-         cam0;crank0 degrees; active benchmark   benchmark policy choice               Explicit software coordinate origin Not a
+datum phase                                                                                             measured tooth/keyway angle.
+
+T03: Cam/crank speed      cam=crank/2 ratio; active benchmark     benchmark policy choice               Discrete four-stroke phase convention
+relation                                                                                                No motion simulation in this benchmark
+                                                                                                        path.
+
+T04: Mark-alignment       0.1 degrees; active benchmark           benchmark policy choice               Finite exact evaluator tolerance Not a
+tolerance                                                                                               workshop measuring tolerance.
+
+T05: Crank mark           tooth-side groove to oil-pump pointer   public source-supported; M; same;     Selected related-application mark
+                          alignment; active benchmark             Printed6-62                           convention
+Appendix C. Engineering specifications — T06 to T10
+Table 20. Appendix C. Engineering specifications — T06 to T10
+Specification             Benchmark value and scope               Basis and public-source value            Selection and disagreement or limit
+
+T06: Cam mark             rear-cover pointer; UP upward           public source-supported; M; same;        Selected source application; other
+                          alignment; active benchmark             Printed6-62 selected application         diagrams differ Head-surface/dual-
+                                                                                                           pointer diagrams belong to other source
+                                                                                                           applications.
+
+T07: Reference            4 crank revolutions; active benchmark   benchmark policy choice; M; about 4 or   Keep existing scripted reference
+seating/recheck turns                                             6 clockwise turns; Printed6-63           convention with correct source
+                                                                                                           attribution S1 page20 says5–6
+                                                                                                           counterclockwise turns; conflicting
+                                                                                                           direction/count explicitly retained.
+
+T08: Reference seating    clockwise viewed from pulley side;      benchmark policy choice; M|S1; M:        Existing benchmark selects M for this
+direction                 active benchmark                        clockwise; S1: counterclockwise; M 6-    seating step Documentation convention
+                                                                  63 versus S1p20                          only: check_timing does not simulate or
+                                                                                                           expose rotation direction. Tension
+                                                                                                           adjustment is separately
+                                                                                                           counterclockwise; E10 must not attribute
+                                                                                                           clockwise motion to S1.
+
+T09: Timing-check         1 through6 integer crank revolutions;   benchmark policy choice                  API resource/domain bound Not proof
+input domain              active benchmark                                                                 that any permitted count completes a real
+                                                                                                           service procedure.
+
+T10: Pre-removal          1 crank revolution; active benchmark    benchmark policy choice                  Scripted compression-datum inspection
+reference check                                                                                            before removal Discrete check; does not
+                                                                                                           execute physical rotation.
+Appendix C. Engineering specifications — T11 to T15
+Table 21. Appendix C. Engineering specifications — T11 to T15
+Specification             Benchmark value and scope                Basis and public-source value            Selection and disagreement or limit
+
+T11: Wrong-timing         15 cam degrees; active benchmark         benchmark policy choice                  Authored misalignment control at crank0
+control phase
+
+T12: Belt installation    crank;adjuster;water pump;cam            public source-supported; M|S1; same; M Related service sequence Abstract belt
+order                     sequence; active benchmark               6-62; S1p20                            install is not a routed belt simulation.
+
+T13: Tension-             counterclockwise pulley-side view;       public source-supported; M|S1|A; same;   Distinct from selected seating step
+adjustment direction      active benchmark                         M 6-58; S1p3; A PDFp6                    Abstract tension_belt records state
+                                                                                                            without these physical motions.
+
+T14: Adjuster release     180 degrees; related reference;          public source-supported; M|S1|A; 180;    Related service instruction Reference
+for tension               abstracted operation                     M 6-58; S1p3; A PDFp6                    instruction; abstract API does not expose
+                                                                                                            adjusting-bolt motion.
+
+T15: Tension-creating     3 cam-pulley teeth; related reference;   public source-supported; M|S1|A; 3       Related service instruction Do not call
+movement                  abstracted operation                     counterclockwise; M 6-58; S1p3; A        this three crank revolutions.
+                                                                   PDFp6
+Appendix C. Engineering specifications — T16 to W01
+Table 22. Appendix C. Engineering specifications — T16 to W01
+Specification            Benchmark value and scope                Basis and public-source value            Selection and disagreement or limit
+
+T16: Replacement         cracks;oil/coolant contamination;tooth   public source-supported; S1; same;       Inspect and replace damaged belt No
+criteria                 damage condition; active benchmark       Printedp3                                numeric wear-life or maintenance
+                                                                                                           interval modeled.
+
+T17: V5 initial          damaged=true boolean; active             benchmark policy choice                  Authored worn-belt task instance
+condition                benchmark                                                                         Boolean damage does not identify which
+                                                                                                           physical inspection defect occurred.
+
+T18: Replacement state new distinct body;damaged=false            benchmark policy choice                  Preserve physical identity and corrected
+                       criterion; active benchmark                                                         inspection state No extra stock timing
+                                                                                                           mechanics inferred.
+
+T19: Tensioned state     true after successful tension_belt       benchmark policy choice                  Explicit procedural operation state Not a
+                         boolean; active benchmark                                                         measured belt force.
+
+W01: Cold service        38 degC; active benchmark                public source-supported; S1; less than38; Related service precondition No thermal
+temperature ceiling                                               Printedp3 timing adjustment               evolution simulated; do not generalize
+                                                                                                            this to all unrelated tasks.
+Appendix C. Engineering specifications — W02 to S15
+Table 23. Appendix C. Engineering specifications — W02 to S15
+Specification            Benchmark value and scope                 Basis and public-source value            Selection and disagreement or limit
+
+W02: Isolation and       battery isolated;coolant drained;engine   public source-supported; M|S1; required Service safety/preparation conditions
+support                  supported criterion; active benchmark     preparation; Removal preparation        Runtime preparation state remains
+                                                                                                           discrete.
+
+S12: Initial residue     1 fraction; active benchmark              benchmark policy choice                  Authored soiled starting condition
+fraction
+
+S13: Initial moisture    dry=false;debris_count=0;damaged=fals benchmark policy choice                      Authored starting inspection state
+and debris               e state; active benchmark
+
+S14: Conditional head    0.2 mm; service corpus; not an            public source-supported; M; 0.20 mm;     Retain service-information context; not
+material-removal         implemented limit                         subject to head height and cam-holder    automatic permission to machine
+maximum                                                            checks; Printed 6-45                     Benchmark machining eligibility does
+                                                                                                            not perform those geometric checks.
+
+S15: Block standard      0.07 mm; service corpus; benchmark        public source-supported; M; 0.07 mm;     Correct public attribution for E06 S1
+warpage maximum          uses0.05 mm                               Printed 7-12                             printed page46 gives0.079 mm; do not
+                                                                                                            silently substitute its converted value.
+Appendix C. Engineering specifications — S16 to G14
+Table 24. Appendix C. Engineering specifications — S16 to G14
+Specification             Benchmark value and scope                   Basis and public-source value            Selection and disagreement or limit
+
+S16: Block service        0.1 mm; service corpus; benchmark           public source-supported; M|S1; 0.10      Retain related service value Not the
+warpage limit             uses0.05 mm                                 mm; M 7-12; S1p46                        active benchmark0.05 mm limit.
+
+S17: MLS finish           50 or finer RA; page unit unspecified;   public source-supported; S3; 50 RA or       Retain source wording without guessing
+recommendation            service corpus; not an implemented limit finer; Surface Finishing                    the dimensional unit The benchmark0.5
+                                                                                                               um value is a separate authored state.
+
+G12: Catalog bore         75.5 mm; service corpus; not selected       public source-supported; S6; 75.5 mm;    Retain historical catalog separately from
+                          stock                                       C4251-030 product fields                 selected stock B01 selected75 mm
+                                                                                                               overrides this related listing for task
+                                                                                                               decisions.
+
+G13: Catalog layer        3 layers; service corpus; related product   public source-supported; S6; 3; C4251-   Product description, not proof of selected
+count                                                                 030 product fields                       stock material response
+
+G14: Catalog              None catalog text; service corpus; related public source-supported; S6; None;        Preserve literal product metadata without
+orientation field         product                                    C4251-030 product fields                  inferring reversibility Does not override
+                                                                                                               benchmark up orientation.
+Appendix C. Engineering specifications — S18 to J04
+Table 25. Appendix C. Engineering specifications — S18 to J04
+Specification             Benchmark value and scope                  Basis and public-source value              Selection and disagreement or limit
+
+S18: Flatness sampling    head:edges and three center                public source-supported; M|S1;             Public service protocol; runtime returns a
+protocol                  directions;block:edges and across center   head:three center directions;block:edges   scalar stand-in A scalar warpage value is
+                          procedure; service corpus; abstract        and across center; M 6-45 head; M 7-12     not an executed straightedge sampling
+                          measurement                                block                                      pattern.
+
+J01: Gasket recovery      0.1 fraction; supplemental estimate        benchmark policy choice                    Explicit inherited recovery estimate; not
+fraction                                                                                                        selected material calibration No
+                                                                                                                checkpoint or technician-time authority.
+
+J02: New-gasket model fresh zero-force initialization; no carried benchmark policy choice                       Explicit installation-epoch initialization
+history               arrays state; supplemental estimate                                                       Old gasket history is not relabeled as
+                                                                                                                new gasket history.
+
+J03: Bolt-extension       supplied stretch_mm treated as             benchmark policy choice                    Explicit software transfer from
+interpretation            permanent set model assumption;                                                       environment truth Not inferred from
+                          supplemental estimate                                                                 torque labels or nominal free length.
+
+J04: Gasket thickness     effective uniform-layer strain scaling     benchmark policy choice                    Transfer inherited contact law using
+transfer                  model assumption; supplemental                                                        supplied thickness and unchanged
+                          estimate                                                                              support frame No selected multilayer
+                                                                                                                material curve; passage layout unknown.
+Appendix C. Engineering specifications — J05 to D01
+Table 26. Appendix C. Engineering specifications — J05 to D01
+Specification             Benchmark value and scope               Basis and public-source value   Selection and disagreement or limit
+
+J05: Model reference      0.762 mm; supplemental estimate         benchmark policy choice         Reference for the declared effective-
+thickness                                                                                         strain transfer Nominal compressed
+                                                                                                  catalog dimension, not measured
+                                                                                                  installed height.
+
+J06: Torque nut factor    0.2 dimensionless; supplemental         benchmark policy choice         Inherited authored torque-to-force
+                          estimate                                                                coefficient Not measured selected
+                                                                                                  thread/bearing friction.
+
+J07: Torque-law           10 mm; supplemental estimate            benchmark policy choice         Inherited torque relation T=K d F
+nominal diameter                                                                                  Coupled sequential equilibrium; not ten
+                                                                                                  independent final-target conversions.
+
+J08: Equilibrium          1e-06 N or N m; numerical               benchmark policy choice         Numerical convergence criterion Not
+residual tolerance        implementation                                                          physical measurement accuracy.
+
+D01: Disengaged-          1e-09 turns; numerical implementation   benchmark policy choice         Floating-point disengagement
+fastener threshold                                                                                comparison Not a measured thread-
+                                                                                                  engagement uncertainty.
+Appendix C. Engineering specifications — D02 to G16
+Table 27. Appendix C. Engineering specifications — D02 to G16
+Specification            Benchmark value and scope                Basis and public-source value   Selection and disagreement or limit
+
+D02: Numeric             1e-09 same unit as compared values;      benchmark policy choice         Deterministic equality comparison Not
+comparison tolerance     numerical implementation                                                 instrument accuracy or service tolerance.
+
+S19: Machining           True boolean; active benchmark           benchmark policy choice         Configured service availability for the
+eligibility                                                                                       benchmark Actual head height, cam-
+                                                                                                  holder clearance and remaining stock are
+                                                                                                  not established.
+
+S20: Accepted head       machine_head or replace operation;       benchmark policy choice         Two allowed ways to resolve V3
+recovery routes          active benchmark
+
+G15: Stock identifiers   HG-075-0762-MLS;HG-078-        benchmark policy choice                   Authored distinguishable supply
+                         1200;HEAD-SERVICE;BELT-SERVICE                                           identities; preserve physical replacement
+                         identifiers; active benchmark                                            identity Names are benchmark stock
+                                                                                                  codes, not verified supplier part
+                                                                                                  numbers.
+
+G16: Extra stock by      wrong gasket:V4;new head:V3;new          benchmark policy choice         Variant-specific offered supplies
+variant                  belt:V5 availability; active benchmark
+Appendix C. Engineering specifications — I01 to D04
+Table 28. Appendix C. Engineering specifications — I01 to D04
+Specification             Benchmark value and scope                  Basis and public-source value   Selection and disagreement or limit
+
+I01: Reported             flatness:m;roughness:um;bolt               benchmark policy choice         Explicit deterministic observation
+dimensional units         extension/free length:mm;gasket                                            interface Unit conversion in this table
+                          bore/thickness:mm channel units; active                                    does not add measurement resolution.
+                          benchmark
+
+I02: Instrument labels    flatness;roughness;length_comparator;le benchmark policy choice            Describe the requested observation
+                          ngth_caliper;caliper labels; active                                        channel A label does not certify a real
+                          benchmark                                                                  instrument or a multi-point protocol.
+
+I03: Unprovided bolt      null / unknown mm; active benchmark        benchmark policy choice         Preserve missing free-length observation
+free length                                                                                          instead of deriving it from torque or
+                                                                                                     nominal length Nominal140 mm part
+                                                                                                     length is not an observed free length.
+
+D03: Root policy          public_observation=technician-             benchmark policy choice         Observation exposure and policy
+metadata                  v2;qualification=software-                                                 provenance; numeric root keys are listed
+                          fixture;flatness_limit_source_ids=[B1]                                     separately Metadata is not additional
+                          metadata; active benchmark                                                 physical calibration.
+
+D04: Complete             source-versioned body poses, routes,       benchmark policy choice         Finite CAD-derived obstruction model
+delivered removal-rule    precedence and release/restoration rules                                   and declared procedural rules; complete
+geometry                  bound set; complete source-bound                                           pointer census retained in the audit
+                          machine census, not a sampled service                                      Grouped geometric arrays are not
+                          value                                                                      workshop limits; no whole-engine
+                                                                                                     contact or trajectory certificate.
+Appendix C. Engineering specifications — J09 to J12
+Table 29. Appendix C. Engineering specifications — J09 to J12
+Specification             Benchmark value and scope                Basis and public-source value            Selection and disagreement or limit
+
+J09: Event-count          2048 events; numerical implementation    benchmark policy choice                  Bounded deterministic solver workload
+maximum
+
+J10: Newton iteration     100 iterations; numerical implementation benchmark policy choice                  Bounded solve workload
+maximum
+
+J11: Line-search step     40 steps; numerical implementation       benchmark policy choice                  Bounded numerical line search
+maximum
+
+S21: Accepted method      plastic_scraper;solvent;abrasive_disc;thr benchmark policy choice; S4; plastic    Software action domain includes good
+names                     ead_brush enum; active benchmark          low-angle preparation; avoid abrasive   and adverse actions Acceptance by the
+                                                                    damage; Surface preparation guidance    interface does not make every method
+                                                                                                            correct; removed fasteners require
+                                                                                                            thread_brush.
+
+J12: Loading-mode         native-calibrated enum; supplemental     benchmark policy choice                  Select inherited authored component
+name                      estimate                                                                          contact law The name refers to
+                                                                                                            component-model calibration, not
+                                                                                                            measured selected stock or factory
+                                                                                                            qualification.
+Appendix C. Engineering specifications — J13 to C11
+Table 30. Appendix C. Engineering specifications — J13 to C11
+Specification             Benchmark value and scope                   Basis and public-source value           Selection and disagreement or limit
+
+J13: Environment to       hb01..hb10 to bolt_01..bolt_10 by           benchmark policy choice                 Declared correspondence of retained
+model position map        matching ordinal ten explicit bindings;                                             source body identities Replacement
+                          supplemental estimate                                                               physical identities remain distinct from
+                                                                                                              fixed service positions.
+
+H24: Accepted CP04        10,9,8,7,6,3,4,5,2,1 OR                     benchmark policy choice; M|S1; M        Amendment 1 accepts either documented
+loosening sequences       10,9,8,7,6,5,4,3,2,1 position sequence;     printed diagram and S1 exact reverse    sequence because public instructions
+                          current signed benchmark acceptance         prose differ; M 6-30 mapped through6-   disagree Source amendment and runtime
+                                                                      54; S1 printed page16                   implementation are separate epochs; old
+                                                                                                              recorded commands are unchanged.
+
+C11: Accepted CP12        new OR original inspected and refitted      benchmark policy choice; M|S1; Inspect Amendment 1 withdraws mandatory new
+cover-gasket condition    with specified sealant criterion; current   gasket condition; local oil and sealant  cover gasket while retaining mandatory
+                          signed benchmark acceptance                 treatment; M 6-55 step12 and application new head gasket Runtime/scorer
+                                                                      note; S1 printed page17                  adoption must be checked at its new
+                                                                                                               source epoch; no historical run is
+                                                                                                               relabeled.
+Appendix D. Agent details and harness disclosure
+
+The collector must restrict the agent to the environment MCP interface and record the full
+prompt, tool schema, requested model, returned model and execution configuration. Session state
+and credentials must be isolated from unrelated work. The public report does not disclose
+account identifiers.
+The recorded historical collector includes wrapper and process-recovery evidence. A successful
+owned-process cleanup test does not prove current model identity, account isolation or
+production lifecycle behavior. These require tests against the exact collector used for study runs.
+Record model calls, tool attempts, successful tool actions, prompt and completion tokens, cache
+accounting if available, wall-clock start and end, retry events and termination reason. If a field
+cannot be obtained, report it as unavailable and explain the measurement boundary. Do not infer
+model calls from tool calls or price from subscription access.
+Keep configuration and prompt versions alongside every attempt. Retries must retain their prior
+records. A failure to execute the apparatus is distinct from an agent choosing an incorrect action.
+Neither a cleanup failure nor a partial response should erase the evidence already collected.
+The agent record should distinguish actions, observations and middleware behavior. Document
+any automatic retries, preprocessing, state recovery or submission logic, so readers can tell which
+decisions the model made. Store model-call counts separately from tool-call counts, and preserve
+prompt and completion tokens, dated prices and elapsed time when those measurements are
+available. Missing telemetry must remain unavailable rather than being inferred from action
+counts [5] [6].
+GPT-6-Luna's finish-action response exceeded the collector's message size limit and was not
+captured; the game state at its finish action is reported.
+Appendix E. Evaluation protocol
+
+This condensed protocol governs the proposed comparison. The complete historical form and a
+field-by-field amendment mapping accompany the report. The present design replaces earlier
+survival endpoints, factorial settings and judge-based scoring; historical records are retained
+without making them current requirements.
+      Study design and approval The dated study design governs the repair benchmark. Record
+      the approved questions, collection scope and amendments before examining outcomes.
+      Collection beyond the exploratory allowance requires the owner's approval. Preserve
+      excluded and superseded records, record changes and document the authority for
+      publication.
+      Task definitions and versions Fix the task variants, checkpoint definitions, weights,
+      prompts and evaluator versions before agent collection. Screen each task against the
+      correct reference procedure and review any ambiguous interpretation. Retain earlier
+      versions separately and record the reason for every later change.
+      Collection environment and validation Describe the collection environment, permitted
+      tools, launch method, configuration and isolation checks. Specify validation frequency,
+      scope and method before collection. Complete the applicable preflight and retain
+      validation evidence for each batch. Tool-interface tests, operating-system isolation and
+      provider qualification are separate checks; earlier fixtures do not establish the selected
+      collection environment.
+      Agent settings and telemetry Record requested and returned model identities, collection
+      surface, prompts, resource limits and supported decoding settings. Preserve commands,
+      diagnostics and revisions. Steps counts model calls; tool calls and interface turns are
+      separate measures. Unavailable identity or usage fields remain unknown.
+      Execution order and resources State funding, execution order, concurrency and retry
+      scheduling. Give each attempt a unique identity, prevent duplicate starts and record
+      scheduling changes after errors. Historical defaults are not the new approved collection
+      plan. Report subscription use separately from token-based API-equivalent cost.
+      Variants and sample allocation Specify the model-by-variant allocation, exploratory
+      allowance, repeats and completion target before collection. The proposed variants remain
+      draft until their definitions and implementations are validated. Retain charged attempts in
+      the accounting, and obtain approval before expanding the full collection matrix.
+Interrupted attempts and retries Retain every attempt, including interruptions, provider
+failures and refusals. Classify model outcomes separately from apparatus failures. Fix
+inclusion, retry and response-selection rules, deduplicate responses and reconcile batch
+totals. Report observed checkpoint evidence and named unknowns for incomplete
+attempts; do not silently remove them from the report or assign missing observations a
+zero score.
+Reference procedure and extraction Fix reference inputs and extraction rules, and use
+unique run identifiers. Validate checkpoint decisions against the correct scripted procedure
+and targeted defective jobs, with independently reviewed final state and action histories.
+Record timeouts, completion evidence and evaluator revisions. The correct reference must
+pass every applicable checkpoint; this requirement is separate from an observed validation
+result.
+Ambiguity and refusal Distinguish an agent refusal, a clarification request, an
+unsupported task and a collection failure. State the classification rule and preserve the
+original response. An unresolved apparatus specification is not automatically an agent
+mistake. Omitting a required agent action under a valid fixed reference can fail its
+checkpoint.
+Scoring and uncertainty Use the template's full and partial completion measures. State
+the Success denominator and Wilson interval, and the bootstrap sampling unit for Score
+and technician time. Fix variant weighting, incomplete-attempt treatment and resampling
+settings before collection. Preserve dependence among checkpoints and bolts within a run.
+Earlier survival and factorial plans are superseded; exploratory checks do not establish
+general model rankings.
+Reporting and deviations Report counts through collection and analysis, separate
+exploratory and later cohorts, and explain deviations. Show model calls, tool calls, tokens
+and wall time separately. Report productive technician time, typed corrective penalties and
+the correct reference time, preserving the distinction between cited durations and
+estimates. Agent results remain pending collection; apparatus records are reported
+separately.
+Evaluator review This application uses deterministic checkpoint evaluators.
+Independently review their decisions against final state and chronological records under a
+stated manual-review plan. The earlier language-model judge threshold and independence
+settings do not apply to this task. The manual-review sample and selection rule must be
+specified rather than inferred from the historical form.
+Appendix E. Current exploratory collection status
+
+The protocol summary above preserves the reviewed precollection design. Exploratory repair
+observations are now reported separately in the results sections. The larger comparative
+collection and confirmatory analysis remain pending. These observations do not amend the
+historical form, remove review requirements or establish physical repair safety.
+Appendix F. Exploratory resources
+One exploratory attempt was observed for each requested model on the standard repair task. The model names identify the model; served model identity was not
+attested. The collector does not supply model-call Steps or a model-specific API price basis, so those cells remain unavailable. A stopped repair remains in the
+run count.
+Table 31. Appendix F. Exploratory resources
+
+Model requested             Tools attempted            Productive s                Penalty s                  Charged s                   Mistake events
+
+GPT-6.1-Sol                 663                        13280                       12012                      25292                       245
+
+GPT-6-Astra                 528                        16190                       1404                       17594                       30
+
+GPT-6-Luna                  807                        15230                       14970                      30200                       309
+Table 32. Appendix F. Exploratory resources
+Model requested                                                 Agent wall s              Input tokens            Output tokens             Cache-read tokens
+
+GPT-6.1-Sol                                                     1079.565809254            3877499                 22686                     3767168
+
+GPT-6-Astra                                                     555.097799603             2301314                 8750                      2187520
+
+GPT-6-Luna                                                      Unavailable               13048986                62622                     12776448
+Productive and penalty charges are additive. Mistake events count affected actions; typed labels can overlap. Cache-read tokens are already included in input
+tokens and must not be added again. Agent wall time excludes setup; tool attempts are not model-call Steps. Recorded telemetry and unavailable observations
+retain separate meanings.
+Luna token counters are the latest observed prefix, with final-turn coverage unavailable. They are displayed separately from complete-turn resource
+measurements and do not supply a complete consumption estimate. Its agent wall time remains unavailable. The accepted finish endpoint preserves the original
+capture refusal and pending response record; it does not convert that record into a completed model turn.
+For Sol, the independent scorer recorded 25262 charged seconds, whereas the used in-game classification records 25292. The documented difference is a cover-
+gasket refit classified as productive work by the independent scorer and as a mistake penalty in the game. The original records are retained. The table uses the in-
+game policy; primary checkpoint points agree.
+The independent and game scorers use different secondary checklist item sets and retain unknowns. Agreement on primary points and shared bolt fields does not
+establish full service coverage or external contract identity. Astra and Luna shared charge entries agree; Sol retains the stated limitation. Luna also retains an
+overlapping mistake-label difference between scorers. These model attempts remain separate from the original-rule scripted references and the earlier incomplete
+diagnostic jobs.
+Appendix F. Exploratory checkpoint outcomes
+
+Each column is one repair attempt. Outcomes join checkpoint identity, weight and pass status
+between the game and independent reports. The full requirements appear in Appendix C.
+Table 33. Appendix F. Exploratory checkpoint outcomes
+Checkpoint                                Weight        GPT-6.1-Sol   GPT-6-Astra   GPT-6-Luna
+
+CP01                                      1             Pass          Pass          Pass
+
+CP02                                      2             Fail          Fail          Fail
+
+CP03                                      1             Pass          Pass          Pass
+
+CP04                                      1             Fail          Fail          Pass
+
+CP05                                      1             Fail          Pass          Fail
+
+CP06                                      1             Pass          Pass          Pass
+
+CP07                                      1             Fail          Pass          Pass
+
+CP08                                      2             Fail          Pass          Pass
+
+CP09                                      2             Fail          Pass          Pass
+
+CP10                                      2             Fail          Pass          Pass
+
+CP11                                      2             Fail          Pass          Pass
+
+CP12                                      2             Fail          Pass          Fail
+Appendix F. Exploratory head-bolt checks
+Table 34. Appendix F. Exploratory head-bolt checks
+Head-bolt position        GPT-6.1-Sol                         GPT-6-Astra                            GPT-6-Luna
+
+hb01                      0/6                                 6/6                                    6/6
+
+hb02                      0/6                                 6/6                                    6/6
+
+hb03                      0/6                                 6/6                                    6/6
+
+hb04                      0/6                                 6/6                                    6/6
+
+hb05                      0/6                                 6/6                                    6/6
+
+hb06                      0/6                                 6/6                                    6/6
+
+hb07                      0/6                                 6/6                                    6/6
+
+hb08                      0/6                                 6/6                                    6/6
+
+hb09                      0/6                                 6/6                                    6/6
+
+hb10                      0/6                                 6/6                                    6/6
+
+Cells give raw criteria passed out of criteria checked. The raw record keeps bolt condition, initial and final torque values, each stage
+sequence and stage order separate. The study collector’s reduced mapping combines the two sequence checks; its denominator is
+different. Sol’s removed bolts are an unfinished observation; final accuracy remains unavailable. Correct final bolt checks do not
+establish correct disassembly, loosening or restoration.
+Appendix F. Exploratory mistake labels
+Table 35. Appendix F. Exploratory mistake labels
+Mistake type              GPT-6.1-Sol                        GPT-6-Astra                          GPT-6-Luna
+
+blocked removal           3                                  1                                    7
+
+invalid action            28                                 14                                   110
+
+missing attachment        None recorded                      None recorded                        1
+restore
+
+redo work                 213                                15                                   191
+
+wrong gasket              2                                  None recorded                        1
+
+An action may carry several labels. The unique event count in the resource table therefore need not equal the sum of these categories.
+Corrective penalties remain charged even if the agent subsequently corrects the state.
+Appendix F. Results machinery and scripted checks
+
+The results software reads saved report data and generates aggregate tables, per-variant and per-
+checkpoint summaries, per-bolt records, typed mistakes and figures. It does not execute the
+environment or an agent. The cases below test that reporting path; they are historical scripted
+procedures, not language-model outcomes.
+Table 36. Appendix F. Results machinery and scripted checks
+Saved scripted case                        Points             Productive   Penalty   Charged
+                                                              seconds      seconds   seconds
+
+Historical baseline (incomplete)           12                 5860         0         5860
+
+wrong torque sequence                      8                  5860         600       6460
+
+under torque                               10                 5860         120       5980
+
+skipped final stage                        10                 5740         12        5752
+
+wrong gasket                               10                 5860         30        5890
+
+reused stretched bolt                      9                  5830         30        5860
+
+wrong timing                               12                 5860         120       5980
+
+The case name correct is inherited from its producer; the recorded draft checkpoints show that
+the baseline is incomplete. The reports lack model, agent-arm and current-variant identities. They
+cannot establish the revised correct reference or populate a model-by-variant results table. The
+timing fault also shares an already unmet timing checkpoint with the incomplete baseline, so
+equal aggregate scores do not demonstrate evaluator sensitivity to that fault.
+Charges are analyst task estimates, not measured technician time or a published labor-time
+standard. Model-call Steps, token counts, API-equivalent Cost and agent wall time are
+unavailable in these reports. The companion tables preserve those missing values and their
+reasons; tool attempts remain a separate field. Scripted case means have no inferential intervals
+and do not populate common-failure findings.
+For later model runs, every row must retain the collector identity, task and evaluator versions,
+original report and telemetry provenance. The reducer keeps interrupted and unsuccessful
+attempts, checks weighted checkpoint arithmetic and labor-ledger totals, and preserves unknown
+component observations. Complete means are withheld when a component is missing; any
+available-case mean has its own denominator. The prepared analysis resamples whole runs
+within declared variants, never individual bolts.
+Appendix F. Original-rule scripted references
+
+These saved procedures complete the original signed checkpoint rules in the environment scorer and the independent scorer. They are
+scripted references, not model attempts. Each uses the earlier disassembly policy and requires both gaskets to be new; the later
+allowance for an inspected cover gasket and the grouped rocker route were not applied retroactively.
+Table 37. Appendix F. Original-rule scripted references
+Variant                Environment            Independent points Tool actions   Productive seconds Penalty seconds     Charged seconds
+                       points
+
+V1                     18/18                  18/18              450            14050              0                   14050
+
+V2                     18/18                  18/18              451            14080              0                   14080
+
+V3                     18/18                  18/18              452            15310              0                   15310
+
+V4                     18/18                  18/18              452            14140              0                   14140
+
+V5                     18/18                  18/18              451            14080              0                   14080
+
+Both scorers report full completion 1 and partial score 1.0 for each listed reference. Tool actions are not model-call Steps. Productive
+and penalty seconds are analyst charges, not elapsed mechanic time. The machining route carries a larger charge; the separately
+recorded replacement-head route is a different procedure and is not pooled into this table.
+Checkpoint outcomes and shared bolt, time and mistake values agree. This does not make the secondary checklists equivalent: the
+standard case has 1674 environment items and 2799 independent items, with unknown condition observations retained. Evidence
+descriptions also differ. Full service coverage and modeled checklist completion are not established. The comparison leaves external
+contract authentication as a separate requirement. These scripts record zero model and provider calls and zero reported API-equivalent
+cost. A separately computed token-priced Cost remains unavailable without dated rates. Agent wall time is unrecorded.
+The older incomplete scripted cases above retain their original records. Neither cohort supplies agent performance or empirical model-
+failure rates. Runs under the amended rules require their own runtime and evaluator evidence.
+Appendix G. Limitations
+
+One run per model; descriptive, not comparative. Technician-time charges are estimates
+requiring validation against published labour-time guides. Game performance is not physical
+repair validation.
+The model observations are exploratory attempts on a standard configured task. Requested
+model identifiers are known, but served identities and model-call Steps are unavailable.
+Geometric visibility, software action checks and finite mechanical predictions establish different
+aspects of the apparatus; they do not certify physical repair. Factory service applicability,
+physical machining and fit, full service coverage, external contract identity and professional
+labor-time sources remain qualified. Earlier incomplete diagnostics and complete original-rule
+references stay separate from amended-rule model attempts. The larger comparative study
+remains pending.
+The benchmark covers a prepared engine and a narrow repair procedure. It omits vehicle-level
+access, physical dexterity, workshop hazards and many inspection cues. Success in this game
+cannot certify a physical repair or authorize deployment on real equipment.
+Geometry is detailed but service access, component mapping and legal transitions are incomplete
+in the reviewed snapshot. Complete original-rule software references are available for the
+configured abnormal conditions; equivalent coverage under the amended rules remains to be
+demonstrated. Service thresholds and orientation information must be resolved rather than
+invented.
+Mechanical models use generic material properties and finite comparisons. They support selected
+state estimates but are not selected-part durability validation. No operating-engine endpoint
+contributes to scoring.
+Technician charges are a domain cost estimate rather than measured workshop performance. The
+historical action table lacks the required professional time sources and correction schedule; later
+scripted diagnostic charges remain analyst estimates. API-equivalent cost may be unavailable for
+a returned model; that limitation must not be concealed by a subscription-price proxy.
+A small set of related variants cannot establish broad repair competence or occupational
+automation. Repeated runs, within-repair bolt observations and shared task structure create
+dependence. The final analysis must state its population and sampling limits; exploratory checks
+must not be presented as a confirmatory study [7] [8].
+Data and code availability: the report is accompanied by a source index, numerical claim table,
+evaluation specification, protocol amendment mapping and configuration records. Source
+identifiers and complete content hashes are kept in these companions so that each substantive
+claim can be inspected without turning the paper into a process log.
+Appendix H. Data and artifacts
+Table 38. Appendix H. Data and artifacts
+
+Table or figure                    Record                                File
+
+Figure 1                           Original illustration                 data/received/workflow-diagram.png
+
+Table 1                            Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 2                            Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 3                            Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 4                            Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Figure 2                           Original illustration                 data/received/oil-render.png
+
+Figure 3                           Original illustration                 data/received/cad-iso.png
+
+Figure 4                           Original illustration                 data/received/joint-laws-figure.png
+Appendix H. Data and artifacts continued
+Table 39. Appendix H. Data and artifacts continued
+
+Table or figure                    Record                                File
+
+Table 5                            Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 6                            Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 7                            Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 8                            Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 9                            Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 10                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 11                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 12                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+Appendix H. Data and artifacts continued
+Table 40. Appendix H. Data and artifacts continued
+
+Table or figure                    Record                                File
+
+Table 13                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 14                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 15                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 16                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 17                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 18                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 19                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 20                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+Appendix H. Data and artifacts continued
+Table 41. Appendix H. Data and artifacts continued
+
+Table or figure                    Record                                File
+
+Table 21                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 22                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 23                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 24                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 25                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 26                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 27                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 28                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+Appendix H. Data and artifacts continued
+Table 42. Appendix H. Data and artifacts continued
+
+Table or figure                    Record                                File
+
+Table 29                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 30                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 31                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 32                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+
+Table 33                           Paired repair reports                 build/results/real/results.json
+
+Table 34                           Paired repair reports                 build/results/real/results.json
+
+Table 35                           Paired repair reports                 build/results/real/results.json
+
+Table 36                           Complete source and quantity ledger   manuscript/claim-to-data.csv
+Appendix H. Data and artifacts continued
+Table 43. Appendix H. Data and artifacts continued
+
+Table or figure                    Record                                     File
+
+Table 37                           Complete source and quantity ledger        manuscript/claim-to-data.csv
+
+Common failures                    Approved trajectory analysis               data/received/approved-common-failures.md
+
+Common failures                    Action witnesses                           data/received/approved-common-failure-sequences.json
+
+Scripted reference                 Amended-rule completed standard-task       data/received/editorial-amended-reference.json
+                                   trace
+
+Scorer corrections                 Current per-action charge and checkpoint   data/received/editorial-current-scorer-check.json
+                                   agreement
+
+Task design and scoring            Benchmark design                           data/received/study-design.md
+
+Service information                Specifications and source corpus           data/received/service.json
+
+Exploratory reports                All paired records and public              data/results-inputs.json
+                                   identity/capture inputs
+Appendix H. Data and artifacts continued
+Table 44. Appendix H. Data and artifacts continued
+
+Table or figure                    Record                               File
+
+Scripted references                Original-rule full reference pairs   data/reference-inputs.json
+
+Table 38                           Data and artifacts source map        data/paper.json
+
+Table 39                           Data and artifacts source map        data/paper.json
+
+Table 40                           Data and artifacts source map        data/paper.json
+
+Table 41                           Data and artifacts source map        data/paper.json
+
+Table 42                           Data and artifacts source map        data/paper.json
+
+Table 43                           Data and artifacts source map        data/paper.json
+
+Table 44                           Data and artifacts source map        data/paper.json
+

@@ -1,0 +1,32 @@
+Creative Commons Attribution 4.0 International (CC BY 4.0)
+
+Copyright (c) 2026 ToolsEnabled, Inc.
+
+The report "Evaluating AI Agents on a Head-Gasket Repair Procedure" in this folder (paper.pdf,
+paper.docx, paper.txt), its figures (figures/), claim-to-data.csv,
+CHANGES-v25.md and README.md, and the repository's BENCHMARK-CARD.md and
+REPRODUCIBILITY.md are licensed under the Creative Commons Attribution 4.0
+International License.
+
+You are free to share (copy and redistribute the material in any medium or
+format) and adapt (remix, transform and build upon the material) for any
+purpose, even commercially, under the following terms: you must give
+appropriate credit, provide a link to the license, and indicate if changes
+were made. You may do so in any reasonable manner, but not in any way that
+suggests the licensor endorses you or your use. No additional restrictions:
+you may not apply legal terms or technological measures that legally restrict
+others from doing anything the license permits.
+
+Suggested attribution: Joshua Pinckard · ToolsEnabled, Inc., "Evaluating AI Agents on a
+Head-Gasket Repair Procedure", October 2026,
+https://github.com/ToolsEnabled/head-gasket-bench,
+licensed under CC BY 4.0.
+
+The full legal code is at https://creativecommons.org/licenses/by/4.0/legalcode
+and a summary at https://creativecommons.org/licenses/by/4.0/.
+
+This licence covers the report text and figures only. Service-source material
+cited in the report keeps the terms of its publishers; a publicly accessible
+source is not a statement that its complete text or geometry may be
+redistributed. The benchmark code is licensed separately under the MIT licence
+(../LICENSE).
