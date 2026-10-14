@@ -11,22 +11,32 @@ SUBMISSION.json (model_label, client, variant, date, submitter, optional notes).
 Checks, in order; the first failure ends the run:
 
   files      exactly the five files, regular files, within the size limits
-  declaration SUBMISSION.json well formed; variant matches the record
-  secrets    no key-shaped strings and no personal or machine-local paths
+  declaration SUBMISSION.json well formed (plain text values, a real YYYY-MM-DD
+             date); variant matches the record
+  secrets    no key-shaped strings and no personal or machine-local paths, in the
+             raw files and in the decoded JSON strings
   chain      canonical record, every digest, the action hash chain, the state
-             links, actions.jsonl and report.json against the record
+             links, 1 to 1,024 attempts, actions.jsonl exactly the journal, and
+             report.json exactly the envelope the environment writes for this
+             record (only its wall-clock seconds are free)
+  duplicate  the tool calls are not those of a published scripted record, of a
+             withheld ToolsEnabled record or of another submission
   pins       configuration is one of env/'s pinned V1-V5 configurations and the
              runtime is env/'s current source manifest; same CPython version
   replay     python3 -m headgasket replay (from env/) reproduces run.json exactly
-  scorer     scorer/hgj_scorer.py score accepts the record, agrees with the
-             environment's embedded score, and agrees with RESULT.md
+  scorer     scorer/hgj_scorer.py score accepts the record and agrees with the
+             environment's embedded score on every primary checkpoint and on every
+             shared field both scorers determine; RESULT.md is exactly the file
+             --write-result generates
 
 Prints one line (PASS or FAIL with the check name) and exits 0 only on PASS.
 Standard library only; nothing here reads the network.
 """
 import argparse
+import datetime
 import hashlib
 import json
+import math
 import re
 import subprocess
 import sys
@@ -43,8 +53,14 @@ LIMITS = {'run.json': 64 * MB, 'actions.jsonl': 64 * MB, 'report.json': 64 * MB,
 DECLARATION_KEYS = {'model_label', 'client', 'variant', 'date', 'submitter'}
 OPTIONAL_KEYS = {'notes'}
 VARIANTS = ('V1', 'V2', 'V3', 'V4', 'V5')
-NAME_RE = re.compile(r'^[a-z0-9][a-z0-9._-]{2,99}$')
-DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+# Used with fullmatch: '$' would also accept a trailing newline, and \d any Unicode digit.
+NAME_RE = re.compile(r'[a-z0-9][a-z0-9._-]{2,99}')
+DATE_RE = re.compile(r'[0-9]{4}-[0-9]{2}-[0-9]{2}')
+# Declaration values are shown in RESULT.md and on the board: no control or
+# bidirectional-override characters, and no backticks (they would end RESULT.md's
+# code spans). notes is shown nowhere and may hold line breaks and tabs.
+SHOWN_FORBIDDEN = re.compile('[\x00-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069`]')
+NOTES_FORBIDDEN = re.compile('[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]')
 TOP_KEYS = {'actions', 'budget', 'config', 'config_sha256', 'environment_source', 'environment_source_sha256',
             'final_state', 'final_state_sha256', 'finished', 'initial_state', 'initial_state_sha256', 'schema',
             'score', 'score_sha256', 'scoring_status'}
@@ -52,6 +68,16 @@ ACTION_KEYS = {'human_time_charge', 'input', 'name', 'post_state_sha256', 'pre_s
                'previous_action_sha256', 'result', 'seq'}
 MAX_ACTIONS = 1024
 SCORER_REVISION = 'amendment-2-20261010'
+# The independent scorer labels a finished run that has no final timing check of
+# enough revolutions 'missing_timing_verification'; the environment has no such
+# mistake type (it scores the same fact in checkpoint CP11, which both scorers
+# decide and which must agree). The mistake-type comparison therefore leaves this
+# independent-only label out.
+INDEPENDENT_ONLY_MISTAKE_TYPES = frozenset({'missing_timing_verification'})
+# What env/hgj/repair_report.py (pinned) writes into report.json.
+REPORT_TIME_SOURCE = 'MCP server session monotonic clock'
+REPORT_TOKEN_SOURCE = 'Not supplied by a provider usage receipt'
+ENDED_REASONS = ('input_ended_without_finish', 'interrupted', 'transport_error')
 
 # Key-shaped strings. Built to match real credential formats, not ordinary words. Some
 # patterns are split into concatenated pieces so that this file itself contains no
@@ -67,13 +93,22 @@ SECRET_PATTERNS = [
     ('model hub token', rb'(?<![A-Za-z0-9])hf_[A-Za-z0-9]{30,}'),
     ('GitLab token', rb'glpat-[A-Za-z0-9_\-]{20,}'),
     ('bearer credential', rb'(?i)\bbearer\s+[A-Za-z0-9._~+/\-]{24,}'),
-    ('assigned credential', rb'(?i)\b(?:api[_-]?key|secret|access[_-]?token|auth[_-]?token|password)["\']?\s*[:=]\s*["\'][^"\'\s]{12,}'),
+    ('assigned credential', rb'(?i)\b(?:api[_-]?key|secret|access[_-]?token|auth[_-]?token|password|token|accountkey)'
+                            rb'["\']?\s*[:=]\s*["\']?[^"\'\s,;}]{12,}'),
+    ('JSON web token', rb'(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.'),
+    ('provider API key', rb'(?<![A-Za-z0-9])(?:xai|pplx)-[A-Za-z0-9]{20,}'),
+    ('provider API key', rb'(?<![A-Za-z0-9])(?:gsk|npm|r8)_[A-Za-z0-9]{20,}'),
+    ('payment API key', rb'(?<![A-Za-z0-9])[sr]k_(?:live|test)_[A-Za-z0-9]{20,}'),
 ]
 PATH_PATTERNS = [
-    ('home directory path', rb'/' + rb'home/[A-Za-z0-9._\-]+'),
-    ('home directory path', rb'/Users/[A-Za-z0-9._\-]+'),
+    # Any user-name characters (also non-ASCII) and either separator.
+    ('home directory path', rb'[\\/]' + rb'home[\\/][^\\/\s"\'<>]+'),
+    ('home directory path', rb'/Users/[^\\/\s"\'<>]+'),
+    ('home directory path', rb'(?i)(?<![A-Za-z0-9._~%-])/users/[^\\/\s"\'<>]+'),
     ('home directory path', rb'(?i)[A-Z]:(?:\\\\|\\|/)+Users(?:\\\\|\\|/)+'),
-    ('machine-local path', rb'/(?:root|mnt|sandbox|private/var|var/folders)/'),
+    ('home directory path', rb'(?i)\\\\wsl(?:\.localhost|\$)'),
+    ('machine-local path', rb'/(?:root|mnt|sandbox|private/var|var/folders|media|run/user)/'),
+    ('home directory path', rb'(?<![A-Za-z0-9._~%-])/u/[A-Za-z0-9._-]+'),
     ('home directory path', rb'(?<![A-Za-z0-9])~/[A-Za-z0-9._\-]+'),
 ]
 COMPILED = [(label, re.compile(pattern)) for label, pattern in SECRET_PATTERNS + PATH_PATTERNS]
@@ -107,8 +142,9 @@ def require(condition, check, message):
 
 def check_files(folder):
     require(folder.is_dir() and not folder.is_symlink(), 'files', f'{folder} is not a folder')
-    require(NAME_RE.match(folder.name) is not None, 'files',
-            'folder name must be lower case letters, digits, ".", "_" or "-" (3-100 characters)')
+    require(NAME_RE.fullmatch(folder.name) is not None, 'files',
+            'folder name must be 3-100 characters: lower case letters, digits, ".", "_" or "-", '
+            'starting with a letter or digit')
     entries = sorted(p.name for p in folder.iterdir())
     require(entries == sorted(LIMITS), 'files',
             'the folder must hold exactly ' + ', '.join(sorted(LIMITS)) + '; found ' + (', '.join(entries) or 'nothing'))
@@ -119,7 +155,10 @@ def check_files(folder):
         size = path.stat().st_size
         require(size <= limit, 'files', f'{name} is {size} bytes; the limit is {limit}')
         total += size
-    require(total <= MAX_SUBMISSION_BYTES, 'files', f'submission is {total} bytes; the limit is {MAX_SUBMISSION_BYTES}')
+    require(total <= MAX_SUBMISSION_BYTES, 'files',
+            f'submission is {total} bytes; the limit is {MAX_SUBMISSION_BYTES}. Each look call adds about 0.4 MB '
+            '(its result of about 200,000 characters is stored in run.json and again in actions.jsonl), '
+            'so a run with about 150 or more look calls is too large to submit')
     return {name: (folder / name).read_bytes() for name in LIMITS}
 
 
@@ -133,17 +172,38 @@ def check_declaration(raw):
     require(DECLARATION_KEYS <= keys, 'declaration', 'SUBMISSION.json needs ' + ', '.join(sorted(DECLARATION_KEYS - keys)))
     require(keys <= DECLARATION_KEYS | OPTIONAL_KEYS, 'declaration',
             'SUBMISSION.json has unknown keys: ' + ', '.join(sorted(keys - DECLARATION_KEYS - OPTIONAL_KEYS)))
-    for key in keys:
+    for key in sorted(keys):
         value = declaration[key]
         require(isinstance(value, str) and value.strip() and len(value) <= (2000 if key == 'notes' else 200),
                 'declaration', f'SUBMISSION.json {key} must be a non-empty string (at most 200 characters, notes 2000)')
+        forbidden = (NOTES_FORBIDDEN if key == 'notes' else SHOWN_FORBIDDEN).search(value)
+        if forbidden:
+            raise Fail('declaration', f'SUBMISSION.json {key} contains {forbidden.group(0)!r}; use plain text (no control '
+                       'or bidirectional-override characters' + ('' if key == 'notes' else ', no backticks') + ')')
     require(declaration['variant'] in VARIANTS, 'declaration', 'variant must be one of ' + ', '.join(VARIANTS))
-    require(DATE_RE.match(declaration['date']) is not None, 'declaration', 'date must be YYYY-MM-DD')
+    require(DATE_RE.fullmatch(declaration['date']) is not None and real_date(declaration['date']), 'declaration',
+            'date must be a real date written YYYY-MM-DD')
     return declaration
 
 
+def real_date(text):
+    try:
+        datetime.date.fromisoformat(text)
+    except ValueError:
+        return False
+    return True
+
+
 def check_secrets(files):
-    for name, raw in files.items():
+    views = dict(files)
+    # JSON escapes (for example \u002f for "/") would hide a value from a scan of the
+    # raw bytes; scan the decoded strings too.
+    for name in ('SUBMISSION.json', 'report.json'):
+        try:
+            views[name + ' (decoded)'] = canonical(json.loads(files[name]))
+        except (ValueError, UnicodeDecodeError, RecursionError):
+            pass  # the declaration and chain checks report it
+    for name, raw in views.items():
         for label, pattern in COMPILED:
             found = pattern.search(raw)
             if found:
@@ -164,8 +224,7 @@ def check_chain(files):
     for key in ('config', 'environment_source', 'initial_state', 'final_state', 'score'):
         require(digest(record[key]) == record[key + '_sha256'], 'chain', f'{key}_sha256 does not match {key}')
     actions = record['actions']
-    require(isinstance(actions, list) and 0 < len(actions) <= MAX_ACTIONS, 'chain',
-            f'the record must hold 1 to {MAX_ACTIONS} action attempts')
+    check_attempt_count(actions)
     previous, state = record['config_sha256'], record['initial_state_sha256']
     for index, row in enumerate(actions, 1):
         require(isinstance(row, dict) and set(row) == ACTION_KEYS, 'chain', f'action {index}: unexpected fields')
@@ -190,7 +249,125 @@ def check_chain(files):
     require(report.get('finished') == record['finished'], 'chain', 'report.json finished differs from the record')
     require((report.get('tool_calls') or {}).get('attempted') == len(actions), 'chain',
             'report.json tool_calls.attempted differs from the journal')
+    check_report(report, record, files['report.json'])
     return record
+
+
+def check_attempt_count(actions):
+    require(isinstance(actions, list), 'chain', 'the record has no action journal')
+    require(len(actions) > 0, 'chain', 'the record holds no tool calls, so there is nothing to score '
+            '(a client that only connected to the server made no run)')
+    require(len(actions) <= MAX_ACTIONS, 'chain',
+            f'the record holds {len(actions)} tool-call attempts, more than the {MAX_ACTIONS:,}-attempt budget. '
+            'The environment keeps recording calls made after turns_remaining reached 0, but the pinned independent '
+            f'scorer accepts at most {MAX_ACTIONS:,} attempts, so this run cannot be scored or submitted '
+            '(a known issue of this environment epoch; see SUBMISSIONS.md)')
+
+
+def report_reasons(record):
+    """The (status, terminal_reason) pairs env/hgj/mcp.py can write for this record.
+
+    The server rewrites report.json after every call with terminal reason 'running'
+    (status in_progress), and once more when it stops; a client that kills the
+    server leaves the per-call version."""
+    if record['finished']:
+        return {('finished', 'finished')}
+    budget = record.get('budget') or {}
+    if budget.get('exhausted'):
+        return {('incomplete', 'budget_exhausted')}
+    factors = (record.get('config') or {}).get('factors') or {}
+    if len(record['actions']) >= factors.get('tool_call_limit', MAX_ACTIONS):
+        return {('incomplete', 'tool_call_limit')}
+    return {('in_progress', None)} | {('incomplete', reason) for reason in ENDED_REASONS}
+
+
+def expected_report(record, seconds, status, reason):
+    """report.json as env/hgj/repair_report.py report_for_run writes it (no token receipt)."""
+    score = record['score']
+    actions = record['actions']
+    successful = sum(1 for row in actions if row['result'].get('ok') is True)
+    return {'schema': 'hgj/repair-run-report/v1', 'run_sha256': digest(record), 'score_sha256': digest(score),
+            'finished': record['finished'], 'status': status, 'terminal_reason': reason,
+            'real_time': {'seconds': seconds, 'source': REPORT_TIME_SOURCE},
+            'tokens': {'input': None, 'output': None, 'total': None, 'status': 'not_recorded',
+                       'source': REPORT_TOKEN_SOURCE},
+            'tool_calls': {'attempted': len(actions), 'successful': successful, 'refused': len(actions) - successful},
+            'human_time': score['human_time'], 'mistakes': score['mistakes'],
+            'bolt_accuracy': score['bolt_accuracy'], 'checklist_accuracy': score['checklist_accuracy'],
+            'coverage': score['coverage'], 'reference_sha256': score['reference_sha256'],
+            'primary_score': score.get('primary_score')}
+
+
+def check_report(report, record, raw):
+    """Every field of report.json follows from the record except the session's wall-clock seconds."""
+    seconds = (report.get('real_time') or {}).get('seconds')
+    require(type(seconds) in (int, float) and math.isfinite(seconds) and seconds >= 0, 'chain',
+            'report.json real_time.seconds must be a finite, non-negative number')
+    pair = (report.get('status'), report.get('terminal_reason'))
+    require(pair in report_reasons(record), 'chain',
+            f'report.json status and terminal_reason {pair} do not fit the record')
+    try:
+        expected = expected_report(record, seconds, *pair)
+    except (KeyError, TypeError, AttributeError):
+        raise Fail('chain', 'run.json score lacks a field report.json copies')
+    require(canonical(expected) == raw, 'chain',
+            'report.json differs from the report the environment writes for this record '
+            '(only real_time.seconds may differ; do not edit it)')
+
+
+# ---------------------------------------------------------------- duplicates
+
+def call_fingerprint(actions):
+    """The tool calls a record made, in order: names and inputs only."""
+    return digest([[row.get('name'), row.get('input')] for row in actions])
+
+
+def journal_calls(path):
+    """The calls of a saved actions.jsonl, or None when it cannot be read."""
+    try:
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > LIMITS['actions.jsonl']:
+            return None
+        return [json.loads(line) for line in path.read_bytes().splitlines() if line.strip()]
+    except (OSError, ValueError, UnicodeDecodeError, RecursionError):
+        return None
+
+
+def check_duplicate(folder, record, files):
+    """Refuse a copy: the same tool calls as a published scripted record or another
+    submission, or the bytes of a withheld ToolsEnabled record. A run that changes a
+    single call is not a copy; ToolsEnabled cannot tell a scripted run from a model run."""
+    mine = call_fingerprint(record['actions'])
+    known = []
+    for kind in ('family', 'reference'):
+        base = REPO / 'runs' / kind
+        if base.is_dir():
+            known += [(f'the published record runs/{kind}/{case.name}', case / 'actions.jsonl')
+                      for case in sorted(base.iterdir()) if case.is_dir() and not case.is_symlink()]
+    roots = []
+    for root in (REPO / 'runs' / 'submitted', Path(folder).parent):
+        if root.is_dir() and root.resolve() not in [r.resolve() for r in roots]:
+            roots.append(root)
+    here = Path(folder).resolve()
+    for root in roots:
+        for other in sorted(root.iterdir()):
+            if other.name == Path(folder).name or other.is_symlink() or not other.is_dir() or other.resolve() == here:
+                continue
+            known.append((f'the submission runs/submitted/{other.name}', other / 'actions.jsonl'))
+    for label, path in known:
+        calls = journal_calls(path)
+        if calls is not None and all(isinstance(row, dict) for row in calls) and call_fingerprint(calls) == mine:
+            raise Fail('duplicate', f'the record makes the same tool calls as {label}; a submission must be a new run')
+    hashes = {sha(files['run.json']), sha(files['actions.jsonl'])}
+    exploratory = REPO / 'runs' / 'exploratory'
+    for provenance in sorted(exploratory.glob('*/provenance.json')) if exploratory.is_dir() else []:
+        try:
+            listed = (json.loads(provenance.read_bytes()).get('withheld_files') or {}).values()
+        except (OSError, ValueError, AttributeError):
+            continue
+        # Either "file": "<sha256>" or "file": {"bytes": ..., "sha256": "<sha256>"}.
+        withheld = {item.get('sha256') if isinstance(item, dict) else item for item in listed}
+        require(not hashes & withheld, 'duplicate',
+                f'the record is the withheld record of runs/exploratory/{provenance.parent.name}')
 
 
 def check_pins(record, declaration):
@@ -253,11 +430,23 @@ def score(run_path):
 
 
 def determined_disagreements(comparison):
-    """The shared-field disagreements that count: those where the independent scorer
-    determined a value. It reports some checklist items as unknown (null), for example
-    on parts a run never touched; an unknown is not compared. The primary checkpoints
-    are compared separately and must always agree."""
-    return [row for row in comparison.get('disagreements') or [] if row.get('independent') is not None]
+    """The shared-field disagreements that count: those on a value both scorers
+    determine. The independent scorer reports some checklist items as unknown (null),
+    for example on parts a run never touched; an unknown is not compared. Its mistake
+    types include one the environment never produces (INDEPENDENT_ONLY_MISTAKE_TYPES);
+    the mistake-type comparison leaves that type out and compares every other type.
+    The primary checkpoints are compared separately and must always agree."""
+    rows = []
+    for row in comparison.get('disagreements') or []:
+        independent = row.get('independent')
+        if independent is None:
+            continue
+        if row.get('field') == 'mistakes/by_type' and isinstance(independent, dict):
+            shared = {k: v for k, v in independent.items() if k not in INDEPENDENT_ONLY_MISTAKE_TYPES}
+            if shared == row.get('producer'):
+                continue
+        rows.append(row)
+    return rows
 
 
 def result_fields(assessment, record, run_raw):
@@ -313,23 +502,35 @@ def validate(folder):
     declaration = check_declaration(files['SUBMISSION.json'])
     check_secrets(files)
     record = check_chain(files)
+    check_duplicate(folder, record, files)
     variant = check_pins(record, declaration)
     check_replay((folder / 'run.json').resolve())
     assessment = score((folder / 'run.json').resolve())
     fields = result_fields(assessment, record, files['run.json'])
     check_result(files['RESULT.md'], fields)
+    generated = render_result(folder.name, declaration, fields).encode('utf-8')
+    require(files['RESULT.md'].replace(b'\r\n', b'\n') == generated, 'scorer',
+            'RESULT.md is not exactly the file --write-result generates (regenerate it; do not edit it)')
     values = dict(fields)
-    return f'{variant} {values["points"]} S_partial {values["S_partial"]}; files, declaration, secrets, chain, pins, replay and scorer checks passed'
+    return (f'{variant} {values["points"]} S_partial {values["S_partial"]}; '
+            'files, declaration, secrets, chain, duplicate, pins, replay and scorer checks passed')
 
 
 def write_result(folder):
     folder = Path(folder)
+    require(folder.is_dir() and not folder.is_symlink(), 'files', f'{folder} is not a folder')
+    for name in ('SUBMISSION.json', 'run.json'):
+        require((folder / name).is_file() and not (folder / name).is_symlink(), 'files', f'{name} is not a regular file')
+    target = folder / 'RESULT.md'
+    require(not target.is_symlink() and (not target.exists() or target.is_file()), 'files',
+            'RESULT.md is a link or not a regular file; remove it and run --write-result again')
     declaration = check_declaration((folder / 'SUBMISSION.json').read_bytes())
     run_raw = (folder / 'run.json').read_bytes()
     record = json.loads(run_raw)
+    check_attempt_count(record.get('actions') if isinstance(record, dict) else None)
     assessment = score((folder / 'run.json').resolve())
     text = render_result(folder.name, declaration, result_fields(assessment, record, run_raw))
-    (folder / 'RESULT.md').write_text(text, encoding='utf-8')
+    target.write_bytes(text.encode('utf-8'))
     return text
 
 
