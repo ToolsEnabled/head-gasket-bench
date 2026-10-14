@@ -30,6 +30,8 @@ from job_accuracy.independent import AssessmentInputError, encoded  # noqa: E402
 from job_accuracy.report import run_report, summary  # noqa: E402
 
 REVISIONS = (ORIGINAL, AMENDMENT1, AMENDMENT2)
+# The sealed scorer epoch with the CP02 revision of 2026-10-14 (PROVENANCE.md, PINS.json).
+SCORER_REVISION = 'refit-preparation-20261010+cp02-20261014'
 TIME_LABEL = 'analyst estimates, not measured technician time or a published labour standard'
 
 
@@ -55,6 +57,7 @@ def number(value, suffix=''):
 def print_score(assessment, revision, path):
     primary = assessment['primary_score']
     print('Head Gasket Job: independent checkpoint score')
+    print('scorer revision: ' + SCORER_REVISION)
     print('record: ' + str(path))
     print('checkpoint revision: ' + revision)
     print('status: ' + assessment['status'] + '; terminal reason: ' + str(assessment['completion'].get('terminal_reason')))
@@ -120,6 +123,7 @@ def cmd_compare(a):
     except AssessmentInputError as error:
         print('refused: ' + error.code, file=sys.stderr)
         return 2
+    print('scorer revision: ' + SCORER_REVISION)
     print_comparison(assessment)
     agree = assessment['primary_comparison']['status'] == 'agreement'
     return 0 if agree else 1

@@ -83,6 +83,11 @@ def replay(config, actions, final):
     initial=config.get('initial_conditions',{}).get('values',{}).get('bolts',{})
     turns={pid:initial.get(pid,{}).get('turns') if config.get('initial_conditions') else f.get('initial_engagement_turns') for pid,f in fasteners.items()}
     setup=None;aligned_check=None
+    # CP02 counts a refused removal as the environment does (paper Appendix C): the part named
+    # is the installed current body of a source position and the policy blocks it (not an
+    # individual removal, or no allowed route), or an allowed route of a scored fastener was
+    # refused. A refused call keeps its input as given, so a stock label is not resolved.
+    scored=set(initial) if config.get('initial_conditions') else set(fasteners);blocking=set()
     def body_source(pid):
         return original_sources.get(pid,next((key for key,value in replacements.items() if value==pid),None))
     def bound(pid):
@@ -137,6 +142,8 @@ def replay(config, actions, final):
                          and any(bound(h) in moving for h in (fasteners[pos].get('holds') or []))]
                 if blocked or holders:reasons.append('installed-predecessor-or-holder')
                 if pid in positions and (not finite(turns.get(pid)) or turns[pid]>1e-9):reasons.append('thread-not-disengaged')
+                if (not ok and raw.get('part_id')==pid and 'inactive-or-removed-body' not in reasons
+                        and (row['mode']!='individual' or route is None or pid in scored)):blocking.add(seq)
                 if ok and not reasons:
                     for body in moving:locations[body]='waste' if body==pid and parts[body]['role']=='gasket_old' else 'tray'
                     for body in moving[1:]:carried[body]=pid
@@ -200,7 +207,9 @@ def replay(config, actions, final):
                               'mode':rows[key]['mode'],'moved':key in moved,'installed':actual.get('location')=='assembly',
                               'original_disposition_correct':body==source[key] or final['parts'][source[key]]['location']=='waste'})
     invalid=[r for r in observations if not r['valid']]
-    disassembly_invalid=[r for r in invalid if r['name'] in ('remove','prepare_condition','release_attachment')]
+    # An executed invalid transition, or a refused removal counted above; other refusals change nothing.
+    disassembly_invalid=[r for r in invalid if r['name'] in ('remove','prepare_condition','release_attachment')
+                         and (r['ok'] or r['sequence'] in blocking)]
     return {'available':True,'source_positions':len(source),'scope':'Discrete source benchmark rules; no physical movement or release validation',
             'observations':observations,'positions':position_rows,'invalid_attempts':invalid,'state_mismatches':mismatches,
             'valid_disassembly':not disassembly_invalid and not disassembly_mismatches,

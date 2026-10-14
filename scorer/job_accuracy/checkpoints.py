@@ -103,7 +103,9 @@ def evaluate(record, reference, secondary, *, checkpoint_revision='signoff-20261
     source_removal=secondary['source_removal']
     if source_removal['available']:
         blocked=[row['sequence'] for row in source_removal['disassembly_invalid_attempts']]
-    refused_removals=[row['seq'] for row in actions if row['name']=='remove' and row['result']['ok'] is False]
+    refused_removals=([row['sequence'] for row in source_removal['disassembly_invalid_attempts'] if row['name']=='remove' and not row['ok']]
+                      if source_removal['available'] else
+                      [row['seq'] for row in actions if row['name']=='remove' and row['result']['ok'] is False])
     record_check(2,{'disassembly_observed':bool(removal_sequences),'no_blocked_removal_attempt':not blocked,
                     'no_refused_removal_attempt':not refused_removals,
                     'source_policy_replay':not source_removal['available'] or source_removal['valid_disassembly']},removal_sequences+blocked+refused_removals)

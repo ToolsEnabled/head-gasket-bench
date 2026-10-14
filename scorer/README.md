@@ -9,6 +9,13 @@ score the environment embedded in the record is used only for a comparison
 afterwards. It does not run the environment, a model, an engine or a physical
 simulation, and it never reads the network.
 
+This is scorer revision `refit-preparation-20261010+cp02-20261014`: the sealed
+scorer epoch with one change, which makes CP02 count refused attempts as the
+paper defines it and as the environment decides it (a refused preparation or
+attachment release, or a removal refused for any reason other than the part
+still being blocked or attached, no longer fails CP02). `PROVENANCE.md` has the
+details and the old and new hashes; `score` and `compare` print the revision.
+
 * `docs/CHECKPOINTS.md`: the twelve checkpoints in plain language, their
   weights, the two accepted loosening orders, how process and final-state
   checkpoints are judged, what the time charges are and are not, and the
@@ -17,7 +24,10 @@ simulation, and it never reads the network.
   secondary measures, and the note that the optional joint estimate is not
   part of scoring.
 * `PROVENANCE.md`: where every file comes from and what was changed.
-* `PINS.json`: the sealed hashes of the scoring modules and of the fixtures.
+* `PINS.json`: the hashes of the scoring modules and of the fixtures. Ten
+  modules are the sealed files; `removal.py` and `checkpoints.py` carry the
+  CP02 revision of 2026-10-14, and their sealed hashes are listed beside the new
+  ones.
 
 ## Layout
 

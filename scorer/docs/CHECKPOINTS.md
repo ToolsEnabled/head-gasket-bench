@@ -10,7 +10,7 @@ question has a weight; the weights add up to 18 points.
 | ID | Weight | Kind | Question the scorer answers |
 |---|---:|---|---|
 | CP01 | 1 | process | Were the torque values, both torque stages and the tightening sequence looked up in the service information before the first head bolt was tightened? |
-| CP02 | 2 | process | Was the disassembly valid under the removal policy: no attempt to remove a part that was still blocked by, or still attached to, something else, and no refused removal attempt? |
+| CP02 | 2 | process | Did the disassembly follow the documented removal policy? Any refused removal attempt of a part that was still blocked or still attached fails CP02, and is also counted as a mistake. |
 | CP03 | 1 | process | Before the timing belt came off, was cylinder 1 at top dead centre with the timing marks aligned, confirmed by a timing check? |
 | CP04 | 1 | process | Were the head bolts loosened in a documented order and in the documented stages before the head was removed? |
 | CP05 | 1 | final state | After the head and the old gasket were removed, and before the new gasket was placed, were both mating surfaces cleaned, and are they clean in the final state? |
@@ -45,6 +45,24 @@ satisfy CP06.
 **Torque credit is cleared** whenever a bolt is loosened, removed or
 reinstalled. CP09 and CP10 look at the stages applied to the bolt in its
 current installation; stages applied before a removal do not carry over.
+
+## Which refused attempts fail CP02
+
+CP02 is the paper's definition (Appendix C), decided as the environment
+decides it. A refused `remove` fails CP02 when the part it names is installed
+and the removal policy does not let it come off yet: it is still blocked
+(no route is open), it comes off only with its assembly, or it stays on for
+this job; or when the part is a scored fastener (a head bolt or a cover bolt)
+whose route is open but whose removal was refused (for example, its thread
+still engaged). A removal or attachment release that went ahead although the
+policy did not allow it would fail CP02 as well; the environment refuses such
+calls. Other refusals do not fail CP02: a refused `prepare_condition` or
+`release_attachment`, and a refused `remove` of a part already removed, of an
+unknown part, or of a part named by its stock label (as the environment reads
+a refused call, the label is not resolved to the part). Every refused attempt,
+whether or not it fails CP02, is charged its base seconds as penalty time.
+Scorer revisions before 2026-10-14 failed CP02 on every refused `remove`,
+`prepare_condition` and `release_attachment` attempt (`../PROVENANCE.md`).
 
 ## The two accepted loosening orders (CP04)
 

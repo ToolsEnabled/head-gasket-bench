@@ -93,11 +93,13 @@
   }
  },
  "notes": [
-  "scoring_modules are byte-identical to both sealed packets; tests marked byte_identical false carry the two expectation fixes described in PROVENANCE.md",
+  "ten scoring_modules are byte-identical to both sealed packets; job_accuracy/removal.py and job_accuracy/checkpoints.py carry the CP02 revision cp02-20261014 (PROVENANCE.md) and keep their sealed pins beside the new sha256",
+  "tests marked byte_identical false carry the two expectation fixes described in PROVENANCE.md",
   "evidence/job-accuracy/current-v1-reduction1/INPUT.json is relabelled (development_sha256 is the sealed original)"
  ],
  "schema": "head-gasket-bench/scorer-pins/v1",
  "scorer_epoch": "refit-preparation-20261010",
+ "scorer_revision": "refit-preparation-20261010+cp02-20261014",
  "scoring_modules": {
   "job_accuracy/__init__.py": {
    "byte_identical": true,
@@ -114,11 +116,12 @@
    "sha256": "7dc9585b6c3a16675b20372a14294391bca489f16af5e52e5171a5cac2267fb1"
   },
   "job_accuracy/checkpoints.py": {
-   "byte_identical": true,
-   "bytes": 22508,
+   "byte_identical": false,
+   "bytes": 22709,
+   "revision": "cp02-20261014",
    "sealed_pin_corrected_epoch": "d00072a59f50894f972b9d711f7e6eef38ab5ce760572a5d1d8f2e7a8758abb5",
    "sealed_pin_supplement_packet": "d00072a59f50894f972b9d711f7e6eef38ab5ce760572a5d1d8f2e7a8758abb5",
-   "sha256": "d00072a59f50894f972b9d711f7e6eef38ab5ce760572a5d1d8f2e7a8758abb5"
+   "sha256": "c91a2c4f28a05fcf54cc3320963434c560174194e84d1e739351db7dc4f6c310"
   },
   "job_accuracy/comparison.py": {
    "byte_identical": true,
@@ -156,11 +159,12 @@
    "sha256": "b79ed4247d388536de57e9fe491ee2f1531fdf28fb4ef8aa109a62b4e8703f5b"
   },
   "job_accuracy/removal.py": {
-   "byte_identical": true,
-   "bytes": 16425,
+   "byte_identical": false,
+   "bytes": 17271,
+   "revision": "cp02-20261014",
    "sealed_pin_corrected_epoch": "5717705677a44c4239e8eee88fd2eb2397f183c3be98f958c231d468fc115ffd",
    "sealed_pin_supplement_packet": "5717705677a44c4239e8eee88fd2eb2397f183c3be98f958c231d468fc115ffd",
-   "sha256": "5717705677a44c4239e8eee88fd2eb2397f183c3be98f958c231d468fc115ffd"
+   "sha256": "3cd93b2e26755d83a4764f9b0e7a817aa00b476f035d6e66cb85581d53bbfa4c"
   },
   "job_accuracy/report.py": {
    "byte_identical": true,

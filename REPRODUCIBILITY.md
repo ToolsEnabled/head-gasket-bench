@@ -52,8 +52,13 @@ python3 hgj_scorer.py score ../runs/family/V1-correct/run.json
 python3 hgj_scorer.py compare ../runs/family/V1-correct/run.json
 ```
 
-Primary checkpoint outcomes and the shared bolt, mistake and time fields must
-agree. The secondary checklists use different item sets (the environment's
+This is scorer revision `refit-preparation-20261010+cp02-20261014`: ten of its
+twelve scoring modules are the sealed scorer epoch's files, and two
+(`removal.py`, `checkpoints.py`) were revised in release 0.1.2 so that CP02 counts
+refused attempts as the paper defines it and as the environment decides it; every
+published record gets the same points, checkpoints and comparison as under the
+sealed modules (`scorer/PROVENANCE.md`). Primary checkpoint outcomes and the shared bolt,
+mistake and time fields must agree. The secondary checklists use different item sets (the environment's
 1,647-1,674 items against the scorer's 2,759-2,799) and are never compared as
 equal percentages; agreement on shared fields does not make every predicate
 equal. Because the item sets differ, the scorer's line `comparison of shared

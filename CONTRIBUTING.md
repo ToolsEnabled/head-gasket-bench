@@ -6,9 +6,13 @@ tools. Please open an issue first for anything larger than a small fix.
 
 - Runs are submitted by pull request; see [SUBMISSIONS.md](SUBMISSIONS.md).
 - The environment's runtime modules and the scorer's scoring modules are
-  pinned by hash, and every published record depends on those exact bytes.
-  A change to them is a new epoch, not a fix: it needs new pins and new runs,
-  and the published records stay as they are.
+  pinned by hash. Every published record replays only under the exact runtime
+  bytes, so a change to the runtime is a new epoch, not a fix: it needs new pins
+  and new runs, and the published records stay as they are. A change to a
+  scoring module is a scorer revision: new hashes in `scorer/PINS.json`, a
+  section in `scorer/PROVENANCE.md` with the reason and the old and new hashes,
+  and a rescore of every published record that reports any changed result (as
+  release 0.1.2 did for CP02).
 - Before you open a pull request, run the tests:
   `(cd env && python3 -m unittest discover -s tests)`,
   `(cd scorer && python3 -m unittest discover -s tests)` and
