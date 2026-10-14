@@ -190,9 +190,12 @@ def prepare_out(raw):
     """The --out folder, ready for a new run, and the lock held on it.
 
     A link is refused. A new folder is created readable only by its owner. An existing
-    folder is used only when it is empty or holds nothing but what a start without any
-    tool call left behind (a client's health check, a listed or restarted server); that
-    is removed first, under the lock, so a folder in use by another server is never touched."""
+    folder must belong to this user and must not be writable by other users (the pinned
+    server writes its files by name, so anyone who can write to the folder could plant a
+    link there during the run). It is used only when it is empty or holds nothing but
+    what a start without any tool call left behind (a client's health check, a listed or
+    restarted server); that is removed first, under the lock, so a folder in use by
+    another server is never touched."""
     out = Path(os.path.abspath(raw))
     if out.is_symlink():
         raise Failure(f'{out}: --out is a symbolic link; name a real folder')
@@ -206,7 +209,7 @@ def prepare_out(raw):
             pass
     if out.is_symlink() or not out.is_dir():
         raise Failure(f'{out}: --out exists and is not a folder')
-    lock = lock_folder(out)
+    lock = open_folder(out)
     try:
         entries = sorted(out.iterdir())
         for entry in entries:
@@ -228,19 +231,36 @@ def prepare_out(raw):
     return out, created, lock
 
 
-def lock_folder(out):
-    """Hold an exclusive lock on --out for the life of this server, so a second start
-    (for example a client health check during a session) cannot reuse the folder."""
-    if fcntl is None:
+def open_folder(out):
+    """Open --out without following a link, check who may write to it, and hold an
+    exclusive lock on it for the life of this server, so a second start (for example a
+    client health check during a session) cannot reuse the folder. Returns the open
+    descriptor, or None where there are no POSIX file permissions and locks."""
+    if os.name != 'posix':
         return None
-    handle = os.open(out, os.O_RDONLY)
+    flags = os.O_RDONLY | getattr(os, 'O_DIRECTORY', 0) | getattr(os, 'O_NOFOLLOW', 0)
     try:
-        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
+        handle = os.open(out, flags)
+    except OSError as error:
+        raise Failure(f'{out}: cannot open --out ({error.strerror}); name a real folder of your own')
+    try:
+        info = os.fstat(handle)
+        if info.st_uid != os.geteuid():
+            raise Failure(f'{out}: --out belongs to another user; name a folder of your own (a new path is created '
+                          'readable only by you)')
+        if info.st_mode & 0o002:
+            raise Failure(f'{out}: other users can write to --out, so they could plant links in it while the server '
+                          'runs; name a folder only you can write to (a new path is created readable only by you)')
+        if fcntl is not None:
+            try:
+                fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise Failure(f'{out}: another headgasket server is using this folder; choose a new folder')
+            except OSError:
+                pass  # a file system without locks: serve without one
+    except BaseException:
         os.close(handle)
-        raise Failure(f'{out}: another headgasket server is using this folder; choose a new folder')
-    except OSError:
-        pass  # a file system without locks: serve without one
+        raise
     return handle
 
 
@@ -258,6 +278,66 @@ def remove_unused(out, created):
         except OSError:
             pass
     return True
+
+
+class BudgetGuard:
+    """The client's input as the pinned server reads it, with every tools/call made after
+    the attempt budget is spent answered here instead.
+
+    The pinned server still records a call made after turns_remaining reached 0, and the
+    pinned independent scorer accepts at most 1,024 attempts, so one such call (a
+    finish, say) made a full-budget run impossible to score or submit. Once the game's
+    budget (or its tool-call guard) is spent, a well-formed tools/call request gets the
+    refusal the game itself would give ({"ok": false, "refusal": "Environment turn budget
+    reached", "turns_remaining": 0}) and never reaches the server, so the record stops at
+    the budget. Every other line, and every line before the budget is spent, is handed
+    on unchanged; a line the server will refuse anyway (oversized, not JSON, invalid
+    UTF-8) is handed on too. The server answers each request before it reads the next
+    line, so a reply written here cannot overtake one of the server's."""
+
+    REFUSAL = {'ok': False, 'refusal': 'Environment turn budget reached', 'turns_remaining': 0}
+
+    def __init__(self, stream, game, sink, max_request_bytes):
+        self.stream, self.game, self.sink = stream, game, sink
+        self.max_request_bytes = max_request_bytes
+        self.partial = False  # the last piece handed on was a cut part of an oversized line
+        self.answered = 0
+
+    def spent(self):
+        budget = self.game.budget()
+        limit = self.game.config['factors'].get('tool_call_limit')
+        return bool(budget and budget['exhausted']) or (limit is not None and len(self.game.records) >= limit)
+
+    def readline(self, size=-1):
+        while True:
+            line = self.stream.readline(size)
+            continuing = self.partial
+            self.partial = bool(line) and not line.endswith('\n') and size is not None and 0 <= size <= len(line)
+            if not line or continuing or self.partial or not self.spent():
+                return line
+            reply = self.reply(line)
+            if reply is None:
+                return line
+            self.sink.write(reply)
+            self.sink.flush()
+            self.answered += 1
+
+    def reply(self, line):
+        """The reply to a tools/call request that the server would pass to the game, or None."""
+        try:
+            if len(line.encode('utf-8')) > self.max_request_bytes:
+                return None
+            request = json.loads(line)
+            canonical(request)
+        except (ValueError, TypeError, RecursionError):
+            return None
+        if not (isinstance(request, dict) and request.get('jsonrpc') == '2.0' and request.get('method') == 'tools/call'
+                and 'id' in request and type(request['id']) in (int, str)
+                and isinstance(request.get('params'), dict) and isinstance(request['params'].get('name'), str)):
+            return None
+        text = canonical(self.REFUSAL).decode().strip()
+        return canonical({'jsonrpc': '2.0', 'id': request['id'],
+                          'result': {'content': [{'type': 'text', 'text': text}], 'isError': True}}).decode()
 
 
 def write_private(path, data):
@@ -294,7 +374,9 @@ def serve_in(out, created, variant, path, config, config_sha, runtime):
             game = importlib.import_module('hgj.game')
             mcp = importlib.import_module('hgj.mcp')
             identity = runtime.identity
-            summary = mcp.serve(game.Game(config, source_runtime=runtime), stdin, sys.stdout, out)
+            job = game.Game(config, source_runtime=runtime)
+            guard = BudgetGuard(stdin, job, sys.stdout, mcp.MAX_REQUEST_BYTES)
+            summary = mcp.serve(job, guard, sys.stdout, out)
     finally:
         stdin.detach()
         if summary is None or summary['actions'] == 0:
@@ -309,6 +391,8 @@ def serve_in(out, created, variant, path, config, config_sha, runtime):
               'interpreter': identity['interpreter'], 'started_utc': started, 'ended_utc': utc_now(),
               'actions': summary['actions'], 'finished': summary['finished']}
     write_private(out / 'launch.json', canonical(launch))
+    if guard.answered:
+        eprint(f'headgasket: the budget was spent; {guard.answered} later tool calls were refused and not recorded')
     eprint(f'headgasket: {summary["actions"]} actions, finished={summary["finished"]}; record in {out}')
     return 0
 
@@ -570,8 +654,9 @@ def build_parser():
 
     p = sub.add_parser('serve', help='run the MCP stdio server for one variant')
     config_options(p)
-    p.add_argument('--out', required=True, help='new or empty folder for run.json, actions.jsonl, report.json, '
-                   'finish-record.json and launch.json (a start without any tool call leaves nothing behind)')
+    p.add_argument('--out', required=True, help='a new folder, or an empty one of yours that other users cannot write '
+                   'to, for run.json, actions.jsonl, report.json, finish-record.json and launch.json (a start without any '
+                   'tool call records nothing)')
     p.set_defaults(func=cmd_serve)
 
     p = sub.add_parser('replay', help='re-derive a run.json and compare it byte for byte')

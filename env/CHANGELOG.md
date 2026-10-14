@@ -9,9 +9,15 @@ launcher (`headgasket/cli.py`) changes:
 - `serve`: a start that makes no tool call (a client's health check, a listed or
   restarted server) records nothing and leaves nothing in `--out`; what such a
   start left behind when it was killed is cleared at the next start; a lock keeps
-  a second server out of a folder in use; a `--out` that is a link, holds links or
-  holds other files is refused; a new folder is created readable only by its
-  owner; `launch.json` is written without following links, `0600`.
+  a second server out of a folder in use; a `--out` that is a link, holds links,
+  holds other files, belongs to another user or can be written by other users is
+  refused (a folder its group can write to is accepted); a new folder is created
+  readable only by its owner; `launch.json` is written without following links,
+  `0600`.
+- `serve`: once the 1,024-attempt budget (or the tool-call guard) is spent, the
+  launcher answers each further `tools/call` itself with the refusal the game
+  gives (`Environment turn budget reached`, `turns_remaining` 0) and does not pass
+  it to the pinned server, so the record stops at the budget and can be scored.
 - `serve` refuses an interpreter other than CPython 3.12.
 - `serve` reads its input as UTF-8 with invalid bytes turned into lone
   surrogates, so the pinned server answers them with a JSON-RPC error instead of

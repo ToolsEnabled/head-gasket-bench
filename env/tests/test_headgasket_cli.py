@@ -261,6 +261,41 @@ class ServeFolderTests(unittest.TestCase):
             self.assertEqual(report['terminal_reason'], 'input_ended_without_finish')
             self.assertEqual(report['tool_calls']['attempted'], 1)
 
+    def test_a_folder_other_users_can_write_to_is_refused(self):
+        # verification of redteam F10: another local user could create --out in advance as
+        # an empty folder anyone can write to and plant run.json.tmp -> victim after the
+        # start check; the pinned server then overwrote the victim with the record.
+        with tempfile.TemporaryDirectory() as folder:
+            shared = Path(folder) / 'shared'
+            shared.mkdir()
+            os.chmod(shared, 0o777)
+            refused = run('serve', '--variant', 'V1', '--out', str(shared), stdin=session([('parts_bin', {})]), check=False)
+            self.assertEqual(refused.returncode, 1)
+            self.assertIn('other users can write to --out', refused.stderr.decode())
+            self.assertEqual(list(shared.iterdir()), [])
+            os.chmod(shared, 0o1777)  # sticky does not help: others can still create links in it
+            refused = run('serve', '--variant', 'V1', '--out', str(shared), stdin=session([]), check=False)
+            self.assertEqual(refused.returncode, 1)
+            # A folder only its owner and group can write to (umask 002) is accepted.
+            group = Path(folder) / 'group'
+            group.mkdir()
+            os.chmod(group, 0o775)
+            run('serve', '--variant', 'V1', '--out', str(group), stdin=session([('parts_bin', {})]))
+            self.assertEqual(len(json.loads((group / 'run.json').read_bytes())['actions']), 1)
+
+    def test_a_folder_of_another_user_is_refused(self):
+        sys.path.insert(0, str(ROOT))
+        from headgasket import cli
+        with tempfile.TemporaryDirectory() as folder:
+            out = Path(folder) / 'theirs'
+            out.mkdir()
+            with mock.patch.object(cli.os, 'geteuid', return_value=os.geteuid() + 1):
+                with self.assertRaises(cli.Failure) as caught:
+                    cli.prepare_out(str(out))
+            self.assertIn('belongs to another user', str(caught.exception))
+            handle = cli.prepare_out(str(out))[2]
+            os.close(handle)
+
     def test_version_and_launch_record(self):
         self.assertEqual(run('--version').stdout.decode().strip(), 'headgasket 0.1.2')
         with tempfile.TemporaryDirectory() as folder:
@@ -269,6 +304,95 @@ class ServeFolderTests(unittest.TestCase):
             self.assertEqual(json.loads((out / 'launch.json').read_bytes())['version'], '0.1.2')
             self.assertEqual((out / 'launch.json').stat().st_mode & 0o777, 0o600)
             self.assertEqual(out.stat().st_mode & 0o077, 0)
+
+
+class BudgetTests(unittest.TestCase):
+    """Calls after the budget is spent are answered by the launcher and not recorded (0.1.2).
+
+    The pinned configurations allow 1,024 attempts; these tests use a copy of V1 with a
+    budget of 3, served with --config and --config-pin."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        config = json.loads((ROOT / 'configs' / 'V1.configuration.json').read_bytes())
+        config['factors']['turn_budget'] = 3
+        config['factors']['tool_call_limit'] = 3
+        raw = (json.dumps(config, sort_keys=True, separators=(',', ':'), ensure_ascii=False) + '\n').encode()
+        self.config = Path(self.tmp.name) / 'small.json'
+        self.config.write_bytes(raw)
+        self.pin = hashlib.sha256(raw).hexdigest()
+        self.out = Path(self.tmp.name) / 'run'
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def serve(self, stdin):
+        return run('serve', '--config', str(self.config), '--config-pin', self.pin, '--out', str(self.out), stdin=stdin)
+
+    def test_calls_after_the_budget_are_refused_and_not_recorded(self):
+        # verification of M2 / redteam F8: one call after turns_remaining reached 0 (a
+        # finish, say) made a full-budget record of 1,025 attempts, which the pinned scorer
+        # cannot score, so the run could not be submitted.
+        served = self.serve(session([('parts_bin', {})] * 3 + [('finish', {}), ('look', {}), ('nonsense', 7)]))
+        replies = [json.loads(line) for line in served.stdout.decode().splitlines()]
+        self.assertEqual([row['id'] for row in replies], [0, 1, 2, 3, 4, 5, 6, 7])
+        third = json.loads(replies[4]['result']['content'][0]['text'])
+        self.assertEqual(third['turns_remaining'], 0)
+        for reply in replies[5:]:
+            self.assertTrue(reply['result']['isError'])
+            self.assertEqual(json.loads(reply['result']['content'][0]['text']),
+                             {'ok': False, 'refusal': 'Environment turn budget reached', 'turns_remaining': 0})
+        self.assertIn('3 later tool calls were refused and not recorded', served.stderr.decode())
+        record = json.loads((self.out / 'run.json').read_bytes())
+        self.assertEqual(len(record['actions']), 3)
+        self.assertEqual(record['budget']['attempted_calls'], 3)
+        self.assertTrue(record['budget']['exhausted'])
+        self.assertEqual(json.loads((self.out / 'report.json').read_bytes())['terminal_reason'], 'budget_exhausted')
+        self.assertEqual(len((self.out / 'actions.jsonl').read_bytes().splitlines()), 3)
+        replayed = json.loads(run('replay', '--record', str(self.out / 'run.json'), '--config', str(self.config),
+                                  '--config-pin', self.pin).stdout)
+        self.assertTrue(replayed['ok'] and replayed['exact'])
+
+    def test_the_refusal_is_the_one_the_game_gives(self):
+        sys.path.insert(0, str(ROOT))
+        import importlib
+        from headgasket import cli
+        pins = cli.load_pins()
+        runtime = cli.runtime_for(pins)
+        config, _ = cli.load_config(self.config, self.pin)
+        with runtime.active():
+            game = importlib.import_module('hgj.game').Game(config, source_runtime=runtime)
+            for _ in range(3):
+                game.call('parts_bin', {})
+            guard = cli.BudgetGuard(io.StringIO(), game, io.StringIO(), 65536)
+            self.assertTrue(guard.spent())
+            for name, arguments in (('finish', {}), ('parts_bin', {}), ('look', {})):
+                self.assertEqual(game.call(name, arguments), cli.BudgetGuard.REFUSAL)
+
+    def test_lines_the_server_refuses_anyway_still_reach_it(self):
+        lines = session([('parts_bin', {})] * 3)
+        lines += b'{"jsonrpc":"2.0","id":20,"method":"tools/call","params":{"name":"look","arguments":{"pad":"' + b'x' * 70000 + b'"}}}\n'
+        lines += b'not json\n'
+        lines += b'{"jsonrpc":"2.0","id":21,"method":"tools/call","params":"look"}\n'
+        lines += b'{"jsonrpc":"2.0","id":22,"method":"ping"}\n'
+        lines += b'{"jsonrpc":"2.0","id":23,"method":"tools/call","params":{"name":"look","arguments":{}}}'  # no newline at the end
+        served = self.serve(lines)
+        replies = [json.loads(line) for line in served.stdout.decode().splitlines()]
+        tail = replies[-5:]
+        self.assertEqual([row.get('error', {}).get('code') for row in tail[:3]], [-32602, -32602, -32602])
+        self.assertEqual(tail[3], {'id': 22, 'jsonrpc': '2.0', 'result': {}})
+        self.assertEqual(tail[4]['id'], 23)
+        self.assertTrue(tail[4]['result']['isError'])
+        self.assertEqual(len(json.loads((self.out / 'run.json').read_bytes())['actions']), 3)
+
+    def test_before_the_budget_is_spent_every_call_reaches_the_game(self):
+        served = self.serve(session([('parts_bin', {}), ('nonsense', {})]))
+        replies = [json.loads(line) for line in served.stdout.decode().splitlines()]
+        refused = json.loads(replies[-1]['result']['content'][0]['text'])
+        self.assertFalse(refused['ok'])
+        self.assertNotEqual(refused['refusal'], 'Environment turn budget reached')
+        self.assertEqual(len(json.loads((self.out / 'run.json').read_bytes())['actions']), 2)
+        self.assertNotIn('later tool calls', served.stderr.decode())
 
 
 if __name__ == '__main__':
