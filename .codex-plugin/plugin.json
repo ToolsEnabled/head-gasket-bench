@@ -1,0 +1,39 @@
+{
+  "name": "head-gasket-bench",
+  "version": "0.1.4",
+  "description": "A recorded procedural benchmark through 18 local MCP tools; not real engine repair guidance.",
+  "author": {
+    "name": "ToolsEnabled, Inc.",
+    "email": "support@toolsenabled.ai"
+  },
+  "homepage": "https://toolsenabled.ai",
+  "repository": "https://github.com/ToolsEnabled/head-gasket-bench",
+  "license": "MIT",
+  "skills": "./codex-skills/",
+  "hooks": [],
+  "mcpServers": {
+    "headgasket": {
+      "command": "python3",
+      "args": [
+        "./tools/codex-mcp.py"
+      ],
+      "cwd": "./",
+      "env_vars": [
+        "HEADGASKET_RUN_DIR",
+        "HEADGASKET_VARIANT"
+      ]
+    }
+  },
+  "interface": {
+    "displayName": "Head Gasket Bench",
+    "shortDescription": "A recorded procedural benchmark through 18 local MCP tools; not real engine repair guidance.",
+    "developerName": "ToolsEnabled, Inc.",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "privacyPolicyURL": "https://github.com/ToolsEnabled/head-gasket-bench/blob/openai-plugin/env/PRIVACY.md",
+    "termsOfServiceURL": "https://toolsenabled.ai/terms/"
+  }
+}
