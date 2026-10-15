@@ -297,11 +297,11 @@ class ServeFolderTests(unittest.TestCase):
             os.close(handle)
 
     def test_version_and_launch_record(self):
-        self.assertEqual(run('--version').stdout.decode().strip(), 'headgasket 0.1.2')
+        self.assertEqual(run('--version').stdout.decode().strip(), 'headgasket 0.1.3')
         with tempfile.TemporaryDirectory() as folder:
             out = Path(folder) / 'run'
             run('serve', '--variant', 'V1', '--out', str(out), stdin=session([('parts_bin', {})]))
-            self.assertEqual(json.loads((out / 'launch.json').read_bytes())['version'], '0.1.2')
+            self.assertEqual(json.loads((out / 'launch.json').read_bytes())['version'], '0.1.3')
             self.assertEqual((out / 'launch.json').stat().st_mode & 0o777, 0o600)
             self.assertEqual(out.stat().st_mode & 0o077, 0)
 
@@ -364,10 +364,10 @@ class BudgetTests(unittest.TestCase):
             game = importlib.import_module('hgj.game').Game(config, source_runtime=runtime)
             for _ in range(3):
                 game.call('parts_bin', {})
-            guard = cli.BudgetGuard(io.StringIO(), game, io.StringIO(), 65536)
+            guard = cli.CallGuard(io.StringIO(), game, io.StringIO(), 65536)
             self.assertTrue(guard.spent())
             for name, arguments in (('finish', {}), ('parts_bin', {}), ('look', {})):
-                self.assertEqual(game.call(name, arguments), cli.BudgetGuard.REFUSAL)
+                self.assertEqual(game.call(name, arguments), cli.CallGuard.REFUSAL)
 
     def test_lines_the_server_refuses_anyway_still_reach_it(self):
         lines = session([('parts_bin', {})] * 3)
@@ -393,6 +393,149 @@ class BudgetTests(unittest.TestCase):
         self.assertNotEqual(refused['refusal'], 'Environment turn budget reached')
         self.assertEqual(len(json.loads((self.out / 'run.json').read_bytes())['actions']), 2)
         self.assertNotIn('later tool calls', served.stderr.decode())
+
+
+
+def replies_of(served):
+    return [json.loads(line) for line in served.stdout.decode().splitlines()]
+
+
+def value_of(reply):
+    return json.loads(reply['result']['content'][0]['text'])
+
+
+def route_refusal(part, routes, turns_remaining):
+    return {'ok': False, 'turns_remaining': turns_remaining,
+            'refusal': f'REMOVAL_POLICY_REFUSED: unknown requested route for part_id {part!r}; its routes are '
+                       + ', '.join(map(repr, routes)) + ' (name one as route_id, or leave route_id out)'}
+
+
+COVER_ROUTES = ['lift-after-fasteners-and-external-ties']
+
+
+class RouteTests(unittest.TestCase):
+    """A remove naming a route the part does not have is answered by the launcher and
+    not recorded (0.1.3).
+
+    The pinned game refuses it, but its scoring step then fails on the unknown route, and
+    the server answers that call and every later one with a JSON-RPC error. The calls
+    and routes below are environment identifiers; the first injected one is the call that
+    stopped a model run on 2026-10-14."""
+
+    def test_the_call_is_refused_and_the_run_goes_on(self):
+        with tempfile.TemporaryDirectory() as folder:
+            out = Path(folder) / 'run'
+            served = run('serve', '--variant', 'V1', '--out', str(out), stdin=session([
+                ('remove', {'part_id': 'cover', 'route_id': 'no-such-route'}),
+                ('look', {}),
+                ('remove', {'part_id': 'cover', 'route_id': 7}),
+                ('remove', {'part_id': 'cover', 'route_id': ''}),
+                ('finish', {})]))
+            replies = replies_of(served)
+            self.assertEqual([row['id'] for row in replies], [0, 1, 2, 3, 4, 5, 6])
+            for index in (2, 4, 5):
+                self.assertTrue(replies[index]['result']['isError'])
+                self.assertEqual(value_of(replies[index]), route_refusal('cover', COVER_ROUTES, 1024 if index == 2 else 1023))
+            self.assertTrue(value_of(replies[3])['ok'])
+            self.assertEqual(value_of(replies[3])['turns_remaining'], 1023)
+            self.assertTrue(value_of(replies[6])['ok'])
+            self.assertEqual(value_of(replies[6])['turns_remaining'], 1022)
+            self.assertIn('headgasket: 3 remove calls named a route the part does not have; they were refused and not '
+                          'recorded', served.stderr.decode())
+            # Not recorded: the record holds the two calls that reached the game.
+            record = json.loads((out / 'run.json').read_bytes())
+            self.assertEqual([row['name'] for row in record['actions']], ['look', 'finish'])
+            self.assertTrue(record['finished'])
+            self.assertEqual(len((out / 'actions.jsonl').read_bytes().splitlines()), 2)
+            verified = json.loads(run('verify', '--run', str(out)).stdout)
+            self.assertTrue(verified['ok'] and verified['checks']['exact_replay'] and verified['checks']['finish_record_json'])
+            self.assertTrue(json.loads(run('validate', str(out)).stdout)['ok'])
+
+    def test_calls_the_game_refuses_safely_reach_it(self):
+        call = {'jsonrpc': '2.0', 'id': 9, 'method': 'tools/call',
+                'params': {'name': 'remove', 'arguments': {'part_id': 'cover', 'route_id': 'no-such-route'}}}
+        # Before the client is initialized the server refuses every call itself.
+        early = (json.dumps(call) + '\n').encode()
+        with tempfile.TemporaryDirectory() as folder:
+            out = Path(folder) / 'run'
+            calls = [('remove', {'part_id': 'nothing', 'route_id': 'no-such-route'}),  # unknown part
+                     ('remove', {'part_id': 'cover', 'route_id': None}),  # null: the schema refuses it
+                     ('remove', {'part_id': 'cover'}),  # no route_id
+                     ('remove', {'part_id': 'cover', 'route_id': COVER_ROUTES[0]}),  # its route, still blocked
+                     ('remove', {'part_id': 'block', 'route_id': 'no-such-route'})]  # stays for the job
+            served = run('serve', '--variant', 'V1', '--out', str(out), stdin=early + session(calls))
+            replies = replies_of(served)
+            self.assertEqual(replies[0], {'jsonrpc': '2.0', 'id': 9, 'error': {'code': -32602, 'message': 'Invalid request'}})
+            self.assertEqual([row['id'] for row in replies], [9, 0, 1, 2, 3, 4, 5, 6])
+            refusals = [value_of(reply)['refusal'] for reply in replies[3:]]
+            self.assertEqual(len(refusals), 5)
+            self.assertFalse(any('its routes are' in text for text in refusals), refusals)
+            self.assertIn('Unknown component identifier', refusals[0])
+            self.assertNotIn('named a route', served.stderr.decode())
+            record = json.loads((out / 'run.json').read_bytes())
+            self.assertEqual([row['input'] for row in record['actions']], [arguments for _, arguments in calls])
+            self.assertEqual([row['result']['refusal'] for row in record['actions']], refusals)
+
+    def test_a_published_record_with_such_calls_added_is_served_unchanged(self):
+        # The calls of runs/family/V1-correct with refused calls added: the S1 call before
+        # call 84 (the same part with its own route, 'unthread'), two at the start, and two
+        # after call 246, where the new gasket (stock label stock_1582134695db, body
+        # gasket_new) is installed in place of the old one. The stock label is resolved as
+        # the game resolves it; the body id is unknown to the game, but the scoring step
+        # reads a refused call's part_id as given and would fail on it. Takes about a minute.
+        published = ROOT.parent / 'runs' / 'family' / 'V1-correct'
+        calls = [(row['name'], row['input']) for row in json.loads((published / 'run.json').read_bytes())['actions']]
+        self.assertEqual(calls[83], ('remove', {'part_id': 'ignition_wire_stay_bolt', 'route_id': 'unthread'}))
+        self.assertEqual(calls[245], ('install', {'orientation': 'up', 'part_id': 'stock_1582134695db'}))
+        injected = {0: [('remove', {'part_id': 'cover', 'route_id': 'no-such-route'}),
+                        ('remove', {'part_id': 'cover', 'route_id': 7})],
+                    83: [('remove', {'part_id': 'ignition_wire_stay_bolt', 'route_id': 'outward-unthread'})],
+                    246: [('remove', {'part_id': 'stock_1582134695db', 'route_id': 'no-such-route'}),
+                          ('remove', {'part_id': 'gasket_new', 'route_id': 'no-such-route'})]}
+        sequence, expected = [], {}
+        for index, item in enumerate(calls + [None]):
+            for extra in injected.get(index, []):
+                part = extra[1]['part_id']
+                routes = {'cover': COVER_ROUTES, 'ignition_wire_stay_bolt': ['unthread']}.get(part, ['lift-after-head'])
+                expected[len(sequence)] = route_refusal(part, routes, 1024 - index)
+                sequence.append(extra)
+            if item is not None:
+                sequence.append(item)
+        with tempfile.TemporaryDirectory() as folder:
+            out = Path(folder) / 'run'
+            served = run('serve', '--variant', 'V1', '--out', str(out), stdin=session(sequence))
+            replies = replies_of(served)[2:]  # after initialize and tools/list
+            self.assertEqual([reply['id'] for reply in replies], list(range(2, len(sequence) + 2)))
+            for position, reply in enumerate(replies):
+                if position in expected:
+                    self.assertEqual(value_of(reply), expected[position])
+                else:
+                    self.assertNotIn('error', reply)
+            self.assertIn('headgasket: 5 remove calls', served.stderr.decode())
+            for name in ('run.json', 'actions.jsonl'):
+                self.assertEqual((out / name).read_bytes(), (published / name).read_bytes(), name)
+
+    def test_no_published_call_names_a_route_its_part_does_not_have(self):
+        # Every remove with a route_id in the published records names a route of the
+        # removal-policy part it stands for, so the launcher hands every published call on.
+        checked = 0
+        for path in sorted((ROOT.parent / 'runs').glob('*/*/run.json')):
+            record = json.loads(path.read_bytes())
+            parts = {part['id']: part for part in record['config']['geometry']['parts']}
+            routes = {row['id']: [item['id'] for item in row['routes']]
+                      for row in record['config']['benchmark_removal']['policy']['parts']}
+            replaced = record['final_state']['benchmark_removal']['replacements']
+            resolved = {row['seq']: row['input'] for row in record['final_state']['action_history']}
+            for row in record['actions']:
+                if row['name'] != 'remove' or 'route_id' not in (row['input'] or {}):
+                    continue
+                self.assertTrue(row['result']['ok'], (path, row['seq']))
+                body = resolved[row['seq']]['part_id']
+                sources = {parts[body].get('l1_body_id')} | {source for source, new in replaced.items() if new == body}
+                for source in sources - {None}:
+                    self.assertIn(row['input']['route_id'], routes[source], (path, row['seq']))
+                checked += 1
+        self.assertEqual(checked, 14 * 51)
 
 
 if __name__ == '__main__':

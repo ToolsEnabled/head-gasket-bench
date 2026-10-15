@@ -19,6 +19,7 @@ Subcommands::
     tools     print the 18 tool definitions
 """
 import argparse
+import copy
 import datetime
 import gzip
 import hashlib
@@ -38,7 +39,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-VERSION = '0.1.2'
+VERSION = '0.1.3'
 VARIANTS = ('V1', 'V2', 'V3', 'V4', 'V5')
 SOURCE_MANIFEST = ROOT / 'data' / 'environment-source.json'
 PINS_PATH = ROOT / 'configs' / 'PINS.json'
@@ -280,20 +281,46 @@ def remove_unused(out, created):
     return True
 
 
-class BudgetGuard:
-    """The client's input as the pinned server reads it, with every tools/call made after
-    the attempt budget is spent answered here instead.
+class CallGuard:
+    """The client's input as the pinned server reads it, with two kinds of tools/call
+    answered here instead. Neither kind reaches the server, so neither is recorded.
 
-    The pinned server still records a call made after turns_remaining reached 0, and the
-    pinned independent scorer accepts at most 1,024 attempts, so one such call (a
-    finish, say) made a full-budget run impossible to score or submit. Once the game's
-    budget (or its tool-call guard) is spent, a well-formed tools/call request gets the
-    refusal the game itself would give ({"ok": false, "refusal": "Environment turn budget
-    reached", "turns_remaining": 0}) and never reaches the server, so the record stops at
-    the budget. Every other line, and every line before the budget is spent, is handed
-    on unchanged; a line the server will refuse anyway (oversized, not JSON, invalid
+    Calls after the attempt budget (0.1.2). The pinned server still records a call made
+    after turns_remaining reached 0, and the pinned independent scorer accepts at most
+    1,024 attempts, so one such call (a finish, say) made a full-budget run impossible to
+    score or submit. Once the game's budget (or its tool-call guard) is spent, a
+    well-formed tools/call request gets the refusal the game itself would give
+    ({"ok": false, "refusal": "Environment turn budget reached", "turns_remaining": 0}),
+    so the record stops at the budget.
+
+    A remove naming a route the part does not have (0.1.3). The pinned game refuses
+    such a call, but then its scoring step evaluates the refused call against the
+    removal policy and fails on the unknown route; the server answers that call and
+    every later one with a JSON-RPC error, so the run cannot go on (the record keeps
+    the calls before it). The launcher answers such a call itself, with the part's
+    route ids, when route_id is given (not null), the client is initialized (as the
+    server requires before it passes a call to the game), and either
+      - the part, resolved as the game resolves it (its id or stock label, and the
+        removal-policy part it stands for, after a replacement made during the run as
+        well), is installed, comes off on its own under the removal policy, and
+        route_id is not one of its routes: the game's own refusal
+        ("REMOVAL_POLICY_REFUSED: unknown requested route"), or
+      - part_id as given (the scoring step reads a refused call's part_id without
+        resolving it, so the internal id of a fitted replacement, which the game
+        does not know, counts too) is the current body of a removal-policy part,
+        route_id is not one of that part's routes, and the pinned scoring step, run
+        read-only on the record so far with this call added as a refused attempt,
+        fails on it.
+    Every other remove reaches the game unchanged, which refuses it itself, if it
+    must, and records it as before: a part the game does not know, no route_id, or
+    a route that is not the part's but does not stop the run (the part is off, or
+    comes off only with its assembly, or stays for the job). The state is only read.
+
+    Every other line, and every line before the budget is spent, is handed on
+    unchanged; a line the server will refuse anyway (oversized, not JSON, invalid
     UTF-8) is handed on too. The server answers each request before it reads the next
-    line, so a reply written here cannot overtake one of the server's."""
+    line, so the game state read here is current, and a reply written here cannot
+    overtake one of the server's."""
 
     REFUSAL = {'ok': False, 'refusal': 'Environment turn budget reached', 'turns_remaining': 0}
 
@@ -301,7 +328,9 @@ class BudgetGuard:
         self.stream, self.game, self.sink = stream, game, sink
         self.max_request_bytes = max_request_bytes
         self.partial = False  # the last piece handed on was a cut part of an oversized line
-        self.answered = 0
+        self.answered = 0  # calls after the budget
+        self.unknown_routes = 0  # remove calls naming a route the part does not have
+        self.initialize_received = self.initialized = False  # the server's session state
 
     def spent(self):
         budget = self.game.budget()
@@ -313,17 +342,18 @@ class BudgetGuard:
             line = self.stream.readline(size)
             continuing = self.partial
             self.partial = bool(line) and not line.endswith('\n') and size is not None and 0 <= size <= len(line)
-            if not line or continuing or self.partial or not self.spent():
+            if not line or continuing or self.partial:
                 return line
-            reply = self.reply(line)
+            request = self.parse(line)
+            reply = self.reply(request)
             if reply is None:
+                self.follow(request)
                 return line
             self.sink.write(reply)
             self.sink.flush()
-            self.answered += 1
 
-    def reply(self, line):
-        """The reply to a tools/call request that the server would pass to the game, or None."""
+    def parse(self, line):
+        """The JSON-RPC request the server would read from this line, or None."""
         try:
             if len(line.encode('utf-8')) > self.max_request_bytes:
                 return None
@@ -331,13 +361,88 @@ class BudgetGuard:
             canonical(request)
         except (ValueError, TypeError, RecursionError):
             return None
-        if not (isinstance(request, dict) and request.get('jsonrpc') == '2.0' and request.get('method') == 'tools/call'
+        if not (isinstance(request, dict) and request.get('jsonrpc') == '2.0' and isinstance(request.get('method'), str)):
+            return None
+        return request
+
+    def follow(self, request):
+        """Track the session state as the server does (it passes tools/call to the game
+        only after initialize and notifications/initialized)."""
+        if request is None:
+            return
+        if 'id' not in request:
+            if request['method'] == 'notifications/initialized' and self.initialize_received:
+                self.initialized = True
+            return
+        params = request.get('params', {})
+        if (type(request['id']) in (int, str) and request['method'] == 'initialize'
+                and isinstance(params, dict) and isinstance(params.get('protocolVersion'), str)):
+            self.initialized, self.initialize_received = False, True
+
+    def reply(self, request):
+        """The reply to a tools/call request answered here, or None to hand it on."""
+        if not (request is not None and request['method'] == 'tools/call'
                 and 'id' in request and type(request['id']) in (int, str)
                 and isinstance(request.get('params'), dict) and isinstance(request['params'].get('name'), str)):
             return None
-        text = canonical(self.REFUSAL).decode().strip()
+        if self.spent():
+            value = self.REFUSAL
+            self.answered += 1
+        else:
+            arguments = request['params'].get('arguments', {})
+            try:
+                routes = self.undeclared_route(request['params']['name'], arguments) if self.initialized else None
+            except Exception:  # never worse than handing the call on, as 0.1.2 did
+                routes = None
+            if routes is None:
+                return None
+            value = {'ok': False, 'refusal': (
+                f'REMOVAL_POLICY_REFUSED: unknown requested route for part_id {arguments["part_id"]!r}; its routes are '
+                + ', '.join(repr(route) for route in routes) + ' (name one as route_id, or leave route_id out)')}
+            if self.game.budget() is not None:
+                # Nothing was charged: the call never reached the game.
+                value['turns_remaining'] = max(0, self.game.config['factors']['turn_budget'] - len(self.game.records))
+            self.unknown_routes += 1
+        text = canonical(value).decode().strip()
         return canonical({'jsonrpc': '2.0', 'id': request['id'],
                           'result': {'content': [{'type': 'text', 'text': text}], 'isError': True}}).decode()
+
+    def undeclared_route(self, name, arguments):
+        """The route ids of the part when this call is a remove that names a route the
+        part does not have and would stop the run (see the class); otherwise None."""
+        game = self.game
+        if (name != 'remove' or not isinstance(arguments, dict) or arguments.get('route_id') is None
+                or not isinstance(arguments.get('part_id'), str) or not game.config.get('benchmark_removal')):
+            return None
+        geometry = importlib.import_module('hgj.benchmark_geometry')
+        part, route = arguments['part_id'], arguments['route_id']
+        installed = geometry.state_for(game)['installed']
+
+        def routes_of(source):
+            return [item['id'] for item in game._removal_rows[source]['routes']]
+
+        # As the game resolves it: the id or stock label, then the policy part it stands for.
+        body = game.public_to_body.get(part)
+        if body is not None and game.state['parts'][body]['location'] == 'assembly':
+            source = geometry.source_id(game, body)
+            if (source is not None and game._removal_rows[source]['mode'] == 'individual'
+                    and installed.get(source) is True and route not in routes_of(source)):
+                return routes_of(source)
+        # As the scoring step reads a refused call: part_id as given; the pinned step decides.
+        current = {geometry.body(game, source): source for source in game._source_to_body}
+        source = current.get(part)
+        if source is not None and route not in routes_of(source) and game.procedure_scoring:
+            scoring = importlib.import_module('hgj.repair_scoring')
+            checkpoints = importlib.import_module('hgj.checkpoints')
+            rows = scoring.resolved_actions(game.records, game.state)
+            rows.append({'seq': len(game.records) + 1, 'name': 'remove', 'input': copy.deepcopy(arguments),
+                         'ok': False, 'result': {'ok': False}})
+            try:
+                checkpoints.disassembly(game.config, game._repair_initial, rows)
+            except ValueError as error:
+                if 'unknown requested route' in str(error):
+                    return routes_of(source)
+        return None
 
 
 def write_private(path, data):
@@ -375,7 +480,7 @@ def serve_in(out, created, variant, path, config, config_sha, runtime):
             mcp = importlib.import_module('hgj.mcp')
             identity = runtime.identity
             job = game.Game(config, source_runtime=runtime)
-            guard = BudgetGuard(stdin, job, sys.stdout, mcp.MAX_REQUEST_BYTES)
+            guard = CallGuard(stdin, job, sys.stdout, mcp.MAX_REQUEST_BYTES)
             summary = mcp.serve(job, guard, sys.stdout, out)
     finally:
         stdin.detach()
@@ -393,6 +498,9 @@ def serve_in(out, created, variant, path, config, config_sha, runtime):
     write_private(out / 'launch.json', canonical(launch))
     if guard.answered:
         eprint(f'headgasket: the budget was spent; {guard.answered} later tool calls were refused and not recorded')
+    if guard.unknown_routes:
+        eprint(f'headgasket: {guard.unknown_routes} remove calls named a route the part does not have; they were '
+               'refused and not recorded')
     eprint(f'headgasket: {summary["actions"]} actions, finished={summary["finished"]}; record in {out}')
     return 0
 
