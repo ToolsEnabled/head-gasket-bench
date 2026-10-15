@@ -90,7 +90,7 @@ class WindowsFolderTests(unittest.TestCase):
     def test_local_path_policy_refuses_namespaces_streams_and_reserved_names(self):
         from headgasket.windows_folder import local_path
         for value in ('\\\\server\\share\\run', '\\\\?\\C:\\run',
-                      'C:\\run:stream', 'C:\\NUL', 'C:\\run.'): 
+                      'C:\\run:stream', 'C:\\NUL', 'C:\\run.'):
             with self.subTest(value=value), self.assertRaises(OSError):
                 local_path(value)
 
