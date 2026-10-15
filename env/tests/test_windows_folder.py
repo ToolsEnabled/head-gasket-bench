@@ -51,6 +51,26 @@ class WindowsFolderTests(unittest.TestCase):
                 win.free(descriptor)
             with self.assertRaisesRegex(OSError, 'other users can write'):
                 win.lock_folder(out)
+
+    def test_a_different_owner_sid_is_refused(self):
+        from headgasket import windows_folder as win
+        with tempfile.TemporaryDirectory() as temp:
+            out = Path(temp) / 'other-owner'
+            win.private_mkdir(out)
+            descriptor = ctypes.c_void_p()
+            win.check(win.descriptor_parse('O:BA', 1, ctypes.byref(descriptor), None))
+            setter = win.api(win.a, 'SetFileSecurityW',
+                             [win.w.LPCWSTR, win.w.DWORD, ctypes.c_void_p])
+            try:
+                if not setter(str(out), 1, descriptor):
+                    error = ctypes.get_last_error()
+                    if error in (5, 1307, 1314):
+                        self.skipTest('fixture needs an administrator to assign the alternate owner SID')
+                    raise ctypes.WinError(error)
+            finally:
+                win.free(descriptor)
+            with self.assertRaisesRegex(OSError, 'belongs to another user'):
+                win.lock_folder(out)
             # A second attempt still refuses: inspecting did not repair the ACL.
             with self.assertRaisesRegex(OSError, 'other users can write'):
                 win.lock_folder(out)

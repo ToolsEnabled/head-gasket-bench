@@ -8,6 +8,11 @@ for ($parent = [IO.Directory]::GetParent($Destination); $parent; $parent = $pare
   if ($parent.Exists -and ($parent.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Reparse-point install ancestors are refused.' }
   if ($parent.Exists) {
     $parentAcl = Get-Acl -LiteralPath $parent.FullName
+    $rawAcl = New-Object Security.AccessControl.RawSecurityDescriptor($parentAcl.GetSecurityDescriptorBinaryForm(), 0)
+    if ($null -eq $rawAcl.DiscretionaryAcl) { throw 'An install ancestor has a null DACL.' }
+    foreach ($ace in $rawAcl.DiscretionaryAcl) {
+      if ([int]$ace.AceType -notin @(0,1)) { throw 'An install ancestor has an unrecognized ACL entry.' }
+    }
     $currentSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
     $trusted = @($currentSid,'S-1-5-18','S-1-5-32-544')
     if ($trusted -notcontains $parentAcl.GetOwner([Security.Principal.SecurityIdentifier]).Value) { throw 'An install ancestor belongs to an untrusted account.' }
