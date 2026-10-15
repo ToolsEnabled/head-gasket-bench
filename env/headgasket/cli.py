@@ -32,14 +32,14 @@ from pathlib import Path
 
 try:
     import fcntl
-except ImportError:  # not POSIX: the folder lock is skipped
+except ImportError:  # Windows uses retained native directory handles below.
     fcntl = None
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-VERSION = '0.1.3'
+VERSION = '0.1.4'
 VARIANTS = ('V1', 'V2', 'V3', 'V4', 'V5')
 SOURCE_MANIFEST = ROOT / 'data' / 'environment-source.json'
 PINS_PATH = ROOT / 'configs' / 'PINS.json'
@@ -197,17 +197,31 @@ def prepare_out(raw):
     what a start without any tool call left behind (a client's health check, a listed or
     restarted server); that is removed first, under the lock, so a folder in use by
     another server is never touched."""
-    out = Path(os.path.abspath(raw))
+    if os.name == 'nt':
+        from headgasket.windows_folder import local_path
+        try:
+            out = local_path(raw)
+        except OSError as error:
+            raise Failure(str(error)) from error
+    else:
+        out = Path(os.path.abspath(raw))
     if out.is_symlink():
         raise Failure(f'{out}: --out is a symbolic link; name a real folder')
     created = False
     if not out.exists():
-        out.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            out.mkdir(mode=0o700)
-            created = True
-        except FileExistsError:
-            pass
+        if os.name == 'nt':
+            from headgasket.windows_folder import create_run_directory
+            try:
+                created = create_run_directory(out)
+            except OSError as error:
+                raise Failure(f'{out}: cannot create private --out ({error})') from error
+        else:
+            out.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                out.mkdir(mode=0o700)
+                created = True
+            except FileExistsError:
+                pass
     if out.is_symlink() or not out.is_dir():
         raise Failure(f'{out}: --out exists and is not a folder')
     lock = open_folder(out)
@@ -227,7 +241,7 @@ def prepare_out(raw):
             raise Failure(f'{out}: holds other files; choose a new, empty folder')
     except BaseException:
         if lock is not None:
-            os.close(lock)
+            close_folder(lock)
         raise
     return out, created, lock
 
@@ -236,9 +250,15 @@ def open_folder(out):
     """Open --out without following a link, check who may write to it, and hold an
     exclusive lock on it for the life of this server, so a second start (for example a
     client health check during a session) cannot reuse the folder. Returns the open
-    descriptor, or None where there are no POSIX file permissions and locks."""
+    descriptor on POSIX, or a native Windows lifetime handle set."""
+    if os.name == 'nt':
+        from headgasket.windows_folder import lock_folder
+        try:
+            return lock_folder(out)
+        except OSError as error:
+            raise Failure(f'{out}: cannot secure --out ({error})') from error
     if os.name != 'posix':
-        return None
+        raise Failure('this platform has no qualified run-folder custody implementation')
     flags = os.O_RDONLY | getattr(os, 'O_DIRECTORY', 0) | getattr(os, 'O_NOFOLLOW', 0)
     try:
         handle = os.open(out, flags)
@@ -263,6 +283,13 @@ def open_folder(out):
         os.close(handle)
         raise
     return handle
+
+
+def close_folder(lock):
+    if os.name == 'nt':
+        lock.close()
+    else:
+        os.close(lock)
 
 
 def remove_unused(out, created):
@@ -463,7 +490,13 @@ def cmd_serve(args):
         return serve_in(out, created, variant, path, config, config_sha, runtime)
     finally:
         if lock is not None:
-            os.close(lock)
+            close_folder(lock)
+        # Native handles refuse directory deletion until the lock is closed.
+        if os.name == 'nt' and created:
+            try:
+                out.rmdir()
+            except OSError:
+                pass
 
 
 def serve_in(out, created, variant, path, config, config_sha, runtime):

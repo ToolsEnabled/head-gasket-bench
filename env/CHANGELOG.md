@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4 (Windows candidate, unpublished)
+
+Launcher-only Windows NTFS directory custody and writer locking replace the
+previous non-POSIX no-op. Linux ownership/flock behavior is retained. All pinned
+runtime modules/configurations and historical record bytes are unchanged.
+
 ## 0.1.3
 
 The runtime closure, the replay-only amended runtime and the V1-V5

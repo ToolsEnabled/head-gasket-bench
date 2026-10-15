@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.4 (Windows candidate, unpublished)
+
+Native Windows NTFS run-folder ownership/ACL validation and lifetime writer and
+ancestor handles; protected directory creation; deterministic self-contained
+Windows ZIP and per-user offline PowerShell/cmd installation. Scientific pins
+and scorer are unchanged. Qualification limits are in RELEASE-NOTES-0.1.4.md.
+
 ## 0.1.3
 
 A launcher fix; details in `RELEASE-NOTES-0.1.3.md`. The pinned runtime (and so

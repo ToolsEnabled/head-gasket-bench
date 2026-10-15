@@ -36,6 +36,15 @@ def session(calls):
     return b''.join((json.dumps(row, sort_keys=True, separators=(',', ':')) + '\n').encode() for row in rows)
 
 
+def make_private(path):
+    if os.name == 'nt':
+        sys.path.insert(0, str(ROOT))
+        from headgasket.windows_folder import private_mkdir
+        private_mkdir(path)
+    else:
+        path.mkdir()
+
+
 class PinTests(unittest.TestCase):
     def test_pins_check_passes_and_lists_nineteen_files(self):
         result = json.loads(run('pins', '--check').stdout)
@@ -161,7 +170,7 @@ class ServeFolderTests(unittest.TestCase):
     def test_an_empty_folder_given_by_the_user_is_kept_after_a_probe(self):
         with tempfile.TemporaryDirectory() as folder:
             out = Path(folder) / 'run'
-            out.mkdir()
+            make_private(out)
             run('serve', '--variant', 'V1', '--out', str(out), stdin=session([]))
             self.assertTrue(out.is_dir())
             self.assertEqual(list(out.iterdir()), [])
@@ -171,7 +180,7 @@ class ServeFolderTests(unittest.TestCase):
         # journal and a partly written temporary record.
         with tempfile.TemporaryDirectory() as folder:
             out = Path(folder) / 'run'
-            out.mkdir()
+            make_private(out)
             (out / 'actions.jsonl').write_bytes(b'')
             (out / 'run.json.tmp').write_bytes(b'{"partial')
             served = run('serve', '--variant', 'V1', '--out', str(out), stdin=session([('look', {})]))
@@ -182,14 +191,14 @@ class ServeFolderTests(unittest.TestCase):
     def test_a_folder_with_other_files_or_a_journal_is_refused(self):
         with tempfile.TemporaryDirectory() as folder:
             other = Path(folder) / 'other'
-            other.mkdir()
+            make_private(other)
             (other / 'notes.txt').write_text('mine')
             refused = run('serve', '--variant', 'V1', '--out', str(other), stdin=session([]), check=False)
             self.assertEqual(refused.returncode, 1)
             self.assertIn('holds other files', refused.stderr.decode())
             self.assertEqual((other / 'notes.txt').read_text(), 'mine')
             started = Path(folder) / 'started'
-            started.mkdir()
+            make_private(started)
             (started / 'actions.jsonl').write_bytes(b'{"seq":1}\n')
             refused = run('serve', '--variant', 'V1', '--out', str(started), stdin=session([]), check=False)
             self.assertEqual(refused.returncode, 1)
@@ -215,6 +224,7 @@ class ServeFolderTests(unittest.TestCase):
                 first.stdout.close(); first.stderr.close()
             self.assertEqual(first.returncode, 0)
 
+    @unittest.skipUnless(os.name == 'posix', 'POSIX symlinks; native junction coverage is in test_windows_folder.py')
     def test_links_are_refused_and_nothing_is_written_through_them(self):
         with tempfile.TemporaryDirectory() as folder:
             base = Path(folder)
@@ -261,6 +271,7 @@ class ServeFolderTests(unittest.TestCase):
             self.assertEqual(report['terminal_reason'], 'input_ended_without_finish')
             self.assertEqual(report['tool_calls']['attempted'], 1)
 
+    @unittest.skipUnless(os.name == 'posix', 'POSIX modes; native DACL refusal is in test_windows_folder.py')
     def test_a_folder_other_users_can_write_to_is_refused(self):
         # verification of redteam F10: another local user could create --out in advance as
         # an empty folder anyone can write to and plant run.json.tmp -> victim after the
@@ -283,6 +294,7 @@ class ServeFolderTests(unittest.TestCase):
             run('serve', '--variant', 'V1', '--out', str(group), stdin=session([('parts_bin', {})]))
             self.assertEqual(len(json.loads((group / 'run.json').read_bytes())['actions']), 1)
 
+    @unittest.skipUnless(os.name == 'posix', 'POSIX UIDs; Windows checks the actual token SID')
     def test_a_folder_of_another_user_is_refused(self):
         sys.path.insert(0, str(ROOT))
         from headgasket import cli
@@ -294,16 +306,21 @@ class ServeFolderTests(unittest.TestCase):
                     cli.prepare_out(str(out))
             self.assertIn('belongs to another user', str(caught.exception))
             handle = cli.prepare_out(str(out))[2]
-            os.close(handle)
+            cli.close_folder(handle)
 
     def test_version_and_launch_record(self):
-        self.assertEqual(run('--version').stdout.decode().strip(), 'headgasket 0.1.3')
+        self.assertEqual(run('--version').stdout.decode().strip(), 'headgasket 0.1.4')
         with tempfile.TemporaryDirectory() as folder:
             out = Path(folder) / 'run'
             run('serve', '--variant', 'V1', '--out', str(out), stdin=session([('parts_bin', {})]))
-            self.assertEqual(json.loads((out / 'launch.json').read_bytes())['version'], '0.1.3')
-            self.assertEqual((out / 'launch.json').stat().st_mode & 0o777, 0o600)
-            self.assertEqual(out.stat().st_mode & 0o077, 0)
+            self.assertEqual(json.loads((out / 'launch.json').read_bytes())['version'], '0.1.4')
+            if os.name == 'nt':
+                from headgasket.windows_folder import lock_folder
+                checked = lock_folder(out)
+                checked.close()
+            else:
+                self.assertEqual((out / 'launch.json').stat().st_mode & 0o777, 0o600)
+                self.assertEqual(out.stat().st_mode & 0o077, 0)
 
 
 class BudgetTests(unittest.TestCase):

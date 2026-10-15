@@ -88,6 +88,42 @@ it finished and left no record.
 
 ## Quick start
 
+### Windows candidate
+
+Native Windows work is on the `windows-port` branch and is **not yet a qualified
+release**. The candidate ZIP includes CPython3.12.3; do not substitute the
+machine's Python3.13. From a new folder, compare
+`(Get-FileHash .\head-gasket-bench-0.1.4-windows-x64.zip -Algorithm SHA256).Hash`
+with its `.sha256` sidecar, then use `Expand-Archive` and run `install.ps1`
+normally. `install.cmd` is the cmd entry point. The default installation is
+`%LOCALAPPDATA%\ToolsEnabled\Head Gasket Bench\0.1.4`.
+Use `-Destination 'C:\your\new-install'` to choose a new folder.
+The installer refuses an existing destination and prints the absolute Python
+command and argument array to enter in your MCP client; it edits no client files.
+Replace the printed `--out` placeholder with a new absolute run-folder path.
+
+Check the install from PowerShell:
+
+```powershell
+& 'C:\your\install\python\python.exe' -B 'C:\your\install\env\bin\headgasket-mcp' pins --check
+& 'C:\your\install\python\python.exe' -B 'C:\your\install\env\bin\headgasket-mcp' tools --json
+```
+
+Run folders require local NTFS, current-user ownership, private ACLs and ordinary
+drive paths of at most240characters. Junctions/reparse ancestors, UNC/device
+paths, alternate streams and trailing dots/spaces are refused. New run folders
+are private before data is written; existing ACLs are never repaired. Windows
+holds directory handles for writer exclusion and protection against path
+replacement; SYSTEM/admin access is trusted. Same-user hostile code is outside
+the boundary. An EOF ends the session and releases the lock. A killed unused
+start can be reclaimed only after its handles close and its existing files pass
+the same no-tool-call checks as Linux. Keep run records outside the install.
+
+Five folder-security checks and pins passed on Windows10Pro22H2 build19045 under
+elevated SSH. Ordinary-user operation, final install/stdio acceptance and an
+independent fresh-folder pass are pending; Windows11 is untested. See
+[candidate release notes](RELEASE-NOTES-0.1.4.md). Linux instructions follow.
+
 You need CPython 3.12 and nothing else: no pip install, no compiler, no
 browser. Check `python3 --version`; if it is not 3.12.x, write `python3.12`
 wherever this README says `python3` (`serve` refuses any other interpreter,
