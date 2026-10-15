@@ -2,6 +2,10 @@ param([string]$Destination = (Join-Path ([Environment]::GetFolderPath('LocalAppl
 $ErrorActionPreference = 'Stop'
 $source = $PSScriptRoot
 if ($Destination -notmatch '^[A-Za-z]:\\' -or $Destination.StartsWith('\\') -or $Destination.Substring(2).Contains(':')) { throw 'Choose a fully qualified local drive path without alternate streams.' }
+if ($Destination.Length -gt 240) { throw 'Choose a local path of at most 240 characters.' }
+foreach ($component in $Destination.Substring(3).Split('\')) {
+  if (!$component -or $component -match '[\x00-\x1f<>"|?*]' -or $component -match '[. ]$' -or $component -match '^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)') { throw 'Ambiguous, reserved or invalid path components are refused before normalization.' }
+}
 $Destination = [IO.Path]::GetFullPath($Destination)
 if (Test-Path -LiteralPath $Destination) { throw 'Destination already exists. Choose a new folder; nothing has been changed.' }
 for ($parent = [IO.Directory]::GetParent($Destination); $parent; $parent = $parent.Parent) {
