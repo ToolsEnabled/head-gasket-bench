@@ -109,7 +109,7 @@ Check the install from PowerShell:
 & 'C:\your\install\python\python.exe' -B 'C:\your\install\env\bin\headgasket-mcp' tools --json
 ```
 
-Run folders require local NTFS, current-user ownership, private ACLs and ordinary
+Run folders require fixed local NTFS, current-user ownership, private ACLs and ordinary
 drive paths of at most240characters. Junctions/reparse ancestors, UNC/device
 paths, alternate streams and trailing dots/spaces are refused. New run folders
 are private before data is written; existing ACLs are never repaired. Windows

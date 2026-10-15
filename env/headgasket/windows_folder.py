@@ -62,6 +62,7 @@ get_ace = api(a, 'GetAce', [c.c_void_p, w.DWORD, c.POINTER(c.c_void_p)])
 volume_info = api(k, 'GetVolumeInformationByHandleW', [w.HANDLE, w.LPWSTR, w.DWORD,
                                                     c.c_void_p, c.c_void_p, c.c_void_p,
                                                     w.LPWSTR, w.DWORD])
+drive_type = api(k, 'GetDriveTypeW', [w.LPCWSTR], w.UINT)
 
 
 def check(ok):
@@ -101,6 +102,8 @@ def local_path(value):
             or any(':' in part or part.endswith((' ', '.')) or Path(part).is_reserved()
                    for part in path.parts[1:])):
         raise OSError('run folders require an ordinary local drive path of at most 240 characters')
+    if drive_type(path.anchor) != 3:  # DRIVE_FIXED; mapped network drives are refused too.
+        raise OSError('Windows run folders require a fixed local drive')
     return path
 
 
@@ -133,14 +136,19 @@ def inspect(handle, own=False):
     if error:
         raise c.WinError(error)
     trusted = []
+    ancestor_owner = c.c_void_p()
     try:
         for text in (user(), 'S-1-5-18', 'S-1-5-32-544'):
             ptr = c.c_void_p()
             check(sid_parse(text, c.byref(ptr)))
             trusted.append(ptr)
+        # Native C:\ on the qualified host is owned by this exact Windows
+        # servicing identity. It is an ancestor-owner allowance only: never a
+        # private-folder owner or an additional trusted ACL writer.
+        check(sid_parse('S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464', c.byref(ancestor_owner)))
         if own and not sid_equal(owner, trusted[0]):
             raise OSError('--out belongs to another user; choose a new folder')
-        if not own and not any(sid_equal(owner, sid) for sid in trusted):
+        if not own and not (any(sid_equal(owner, sid) for sid in trusted) or sid_equal(owner, ancestor_owner)):
             raise OSError('a run-folder ancestor belongs to an untrusted account')
         if not dacl:
             raise OSError('--out has a null DACL; other users can write to it')
@@ -173,6 +181,8 @@ def inspect(handle, own=False):
     finally:
         for ptr in trusted:
             free(ptr)
+        if ancestor_owner:
+            free(ancestor_owner)
         free(descriptor)
 
 

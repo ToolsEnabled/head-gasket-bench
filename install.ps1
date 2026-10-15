@@ -7,6 +7,8 @@ foreach ($component in $Destination.Substring(3).Split('\')) {
   if (!$component -or $component -match '[\x00-\x1f<>"|?*]' -or $component -match '[. ]$' -or $component -match '^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)') { throw 'Ambiguous, reserved or invalid path components are refused before normalization.' }
 }
 $Destination = [IO.Path]::GetFullPath($Destination)
+$volume = New-Object IO.DriveInfo -ArgumentList ([IO.Path]::GetPathRoot($Destination))
+if ($volume.DriveType -ne [IO.DriveType]::Fixed -or $volume.DriveFormat -ne 'NTFS') { throw 'Choose a fixed local NTFS drive.' }
 if (Test-Path -LiteralPath $Destination) { throw 'Destination already exists. Choose a new folder; nothing has been changed.' }
 for ($parent = [IO.Directory]::GetParent($Destination); $parent; $parent = $parent.Parent) {
   if ($parent.Exists -and ($parent.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Reparse-point install ancestors are refused.' }
@@ -19,7 +21,8 @@ for ($parent = [IO.Directory]::GetParent($Destination); $parent; $parent = $pare
     }
     $currentSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
     $trusted = @($currentSid,'S-1-5-18','S-1-5-32-544')
-    if ($trusted -notcontains $parentAcl.GetOwner([Security.Principal.SecurityIdentifier]).Value) { throw 'An install ancestor belongs to an untrusted account.' }
+    $trustedOwners = $trusted + @('S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464')
+    if ($trustedOwners -notcontains $parentAcl.GetOwner([Security.Principal.SecurityIdentifier]).Value) { throw 'An install ancestor belongs to an untrusted account.' }
     foreach ($rule in $parentAcl.GetAccessRules($true,$true,[Security.Principal.SecurityIdentifier])) {
       if ($rule.AccessControlType -eq 'Allow' -and $rule.PropagationFlags -notlike '*InheritOnly*' -and $trusted -notcontains $rule.IdentityReference.Value -and ([long]$rule.FileSystemRights -band 0x500D0140)) { throw 'Another account can replace an install ancestor; choose a private destination.' }
     }
