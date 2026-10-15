@@ -214,10 +214,13 @@ the five files are published in this repository under its MIT licence.
 
 Known issues of this environment epoch, which need new pinned code to fix (see
 the release notes): a record of more than 1,024 attempts cannot be scored (`serve`
-0.1.2 stops recording at 1,024); and a `remove` call whose `route_id` is not one of
-the part's routes makes the pinned environment fail every call from then on (the
-record keeps the calls before it, and can be submitted as a run that stopped
-early).
+0.1.2 and later stops recording at 1,024); and a `remove` call whose `route_id` is
+not one of the routes of an installed part that comes off on its own makes the
+pinned environment fail that call and every later one. `serve` 0.1.3 and later
+answers such a call itself, with the part's routes, and does not record it, so
+the run goes on. A run made with the 0.1.2 launcher (or earlier) that hit it
+stopped there: its record keeps the calls before it and can be submitted as a run
+that stopped early.
 
 The independent scorer of 0.1.0 and 0.1.1 failed CP02 on every refused
 `remove`, `prepare_condition` or `release_attachment` attempt, where the

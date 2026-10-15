@@ -6,7 +6,7 @@ authors:
   - family-names: Pinckard
     given-names: Joshua
   - name: "ToolsEnabled, Inc."
-version: 0.1.2
+version: 0.1.3
 date-released: "2026-10-14"
 repository-code: "https://github.com/ToolsEnabled/head-gasket-bench"
 url: "https://toolsenabled.ai/headgasket/"

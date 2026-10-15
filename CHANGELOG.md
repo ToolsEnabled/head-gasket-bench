@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.1.3
+
+A launcher fix; details in `RELEASE-NOTES-0.1.3.md`. The pinned runtime (and so
+the environment epoch), the configurations, the scorer, the published records,
+the board and the paper are unchanged.
+
+- Launcher (`env/headgasket/cli.py`, `serve`): a `remove` whose `route_id` is not
+  one of the routes of an installed part that comes off on its own is answered by
+  the launcher with the part's routes and does not reach the pinned server. The
+  pinned environment refuses such a call, but then fails while it scores the
+  refused call for CP02 and answers that call and every later one with a JSON-RPC
+  error (`-32602`), so the run could not go on (a known issue in 0.1.2). The part
+  is resolved as the game resolves it (its id or stock label, and a replacement
+  fitted during the run); the internal id of a fitted replacement, which the game
+  does not know but its scoring step reads as given, is answered too, after the
+  pinned scoring step, run read-only, confirms that the call would stop it. The
+  call is not recorded and uses no attempt, like a call after the budget (0.1.2);
+  `serve` prints how many there were when it stops. Calls the environment refuses
+  without stopping (an unknown part, no `route_id`, a part that is off or that
+  comes off only with its assembly or stays for the job) reach it unchanged.
+- `--version`, the start line and `launch.json` say 0.1.3.
+- Tests: `env/tests/test_headgasket_cli.py` `RouteTests`: the refusal and the
+  session after it; calls the environment refuses safely still reach it; the
+  calls of `runs/family/V1-correct` with five such calls added produce that record
+  byte for byte; every `remove` with a `route_id` in the 14 published records names
+  one of its part's routes.
+- Documentation: the known issue in `README.md`, `env/README.md`,
+  `SUBMISSIONS.md` and `env/SECURITY.md`; `CITATION.cff` version.
+
 ## 0.1.2
 
 Fixes from an independent check of 0.1.1, a scorer revision for CP02 and five

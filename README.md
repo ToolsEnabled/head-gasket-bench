@@ -204,7 +204,12 @@ a refused attempt is charged its base technician seconds as penalty. When
 with the budget refusal and does not record it, so the record stops at 1,024
 attempts. (The pinned server itself would record it, and the pinned independent
 scorer cannot score a record of more than 1,024 attempts, a known issue of this
-environment epoch.)
+environment epoch.) `serve` 0.1.3 and later also answers itself, without
+recording it, a `remove` whose `route_id` is not one of the routes of an
+installed part that comes off on its own; the refusal lists the part's routes.
+The pinned environment refuses such a call too, but then fails it and every later
+call with a JSON-RPC error, so with the 0.1.2 launcher (or earlier) such a run
+stopped there (another known issue of this epoch).
 
 **Validate.** From `/ABS/REPO/env`:
 

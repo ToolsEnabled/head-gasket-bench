@@ -14,7 +14,7 @@ Please report a security problem privately, not in a public issue:
 - email **security@toolsenabled.ai**.
 
 Tell us the environment version (`python3 -m headgasket --version`, which
-prints the launcher's release, 0.1.2 for this one, and the
+prints the launcher's release, 0.1.3 for this one, and the
 `source_manifest_sha256` that every run record carries; the MCP `serverInfo`
 version still says 0.1.0, because that string sits in the pinned runtime), what
 you found, and how to reproduce it. We read every report, reply as soon as we can, keep you
@@ -76,7 +76,9 @@ writes `launch.json` without following links. The pinned server writes its files
 by name inside that folder, following links, so a folder your group can write to
 (which the launcher accepts) is safe only if you trust the group; keep `--out`
 where only you can write. Once the 1,024-attempt budget is spent, the launcher
-answers further tool calls itself and does not pass them to the server.
+answers further tool calls itself and does not pass them to the server; it does
+the same for a `remove` naming a route that an installed part does not have
+(0.1.3), which would make the pinned server fail every later call.
 
 The server is not a sandbox for the AI client that drives it. It cannot stop a
 client from using other tools, reading files or calling networks; isolating

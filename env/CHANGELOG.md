@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.3
+
+The runtime closure, the replay-only amended runtime and the V1-V5
+configurations are unchanged (`python3 -m headgasket pins --check`). The
+launcher (`headgasket/cli.py`) changes:
+
+- `serve`: a `remove` whose `route_id` is not one of the routes of an installed
+  part that comes off on its own is answered by the launcher, with the part's
+  routes, and is not passed to the pinned server, which would refuse it and then
+  fail that call and every later one while scoring it (JSON-RPC error `-32602`).
+  The call is not recorded and uses no attempt; `serve` prints how many there
+  were when it stops. See `RELEASE-NOTES-0.1.3.md` in the repository root.
+- `--version`, the start line and `launch.json` say 0.1.3; the MCP `serverInfo`
+  version and `configs/PINS.json` still say 0.1.0 (pinned files).
+
 ## 0.1.2
 
 The runtime closure, the replay-only amended runtime and the V1-V5

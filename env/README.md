@@ -82,6 +82,17 @@ attempts. The pinned server itself would record such a call, and the pinned
 independent scorer cannot score a record of more than 1,024 attempts (a known
 issue of this environment epoch), so always start the server with `serve`.
 
+Routes: `inspect` on a part lists its removal routes. A `remove` that names a
+`route_id` that is not one of the routes of an installed part that comes off on
+its own is answered by `serve` (0.1.3 and later) itself, with the part's routes
+(`REMOVAL_POLICY_REFUSED: unknown requested route for part_id ...; its routes are
+...`), and is not recorded and uses no attempt. The pinned server refuses such a
+call too, but then fails while it scores it, and answers that call and every
+later one with a JSON-RPC error (`-32602`), so a run made with the 0.1.2 launcher
+or with the server started some other way stops there (a known issue of this
+environment epoch). Leave `route_id` out to let the environment take the first
+open route.
+
 ## The five variants
 
 | Variant | Starting condition | Configuration SHA-256 |
