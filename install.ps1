@@ -38,10 +38,16 @@ for ($i = $missing.Count - 1; $i -ge 0; $i--) { [IO.Directory]::CreateDirectory(
 foreach ($item in $manifest.files) {
   $target = Join-Path $Destination $item.path
   [IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($target)) | Out-Null
-  [IO.File]::Copy((Join-Path $source $item.path), $target, $false)
+  # Create new destination files so they inherit the private destination ACL;
+  # CopyFile may carry security attributes from a publicly extracted source.
+  $inputFile = [IO.File]::OpenRead((Join-Path $source $item.path))
+  try {
+    $outputFile = [IO.File]::Open($target, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+    try { $inputFile.CopyTo($outputFile); $outputFile.Flush($true) } finally { $outputFile.Dispose() }
+  } finally { $inputFile.Dispose() }
   if ((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash.ToLowerInvariant() -ne $item.sha256) { throw 'Installed-byte verification failed; preserve this folder for inspection.' }
 }
-[IO.File]::Copy((Join-Path $source 'WINDOWS-MANIFEST.json'), (Join-Path $Destination 'WINDOWS-MANIFEST.json'), $false)
+[IO.File]::WriteAllBytes((Join-Path $Destination 'WINDOWS-MANIFEST.json'), [IO.File]::ReadAllBytes((Join-Path $source 'WINDOWS-MANIFEST.json')))
 Write-Output ('Installed in ' + $Destination)
 Write-Output 'MCP command/args (choose a new private --out path for each run):'
 @{ command=(Join-Path $Destination 'python\python.exe'); args=@('-B',(Join-Path $Destination 'env\bin\headgasket-mcp'),'serve','--variant','V1','--out','C:\REPLACE\WITH\NEW\RUN') } | ConvertTo-Json -Depth 3
