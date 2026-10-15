@@ -155,6 +155,19 @@ class StdioSessionTests(unittest.TestCase):
 class ServeFolderTests(unittest.TestCase):
     """What serve does with its --out folder and its input (0.1.2)."""
 
+    def test_stdio_and_diagnostics_are_utf8_with_unicode_request_id_and_path(self):
+        with tempfile.TemporaryDirectory() as folder:
+            out = Path(folder) / 'run-café-Ω-中'
+            identity = 'request-café-Ω-中'
+            request = {'jsonrpc': '2.0', 'id': identity, 'method': 'initialize',
+                       'params': {'protocolVersion': '2025-11-25'}}
+            completed = run('serve', '--variant', 'V1', '--out', str(out),
+                            stdin=(json.dumps(request, ensure_ascii=False) + '\n').encode('utf-8'))
+            reply = json.loads(completed.stdout.decode('utf-8'))
+            self.assertEqual(reply['id'], identity)
+            self.assertIn(str(out), completed.stderr.decode('utf-8'))
+            self.assertNotIn(b'\r\n', completed.stdout)
+
     def test_a_start_without_tool_calls_leaves_nothing_behind(self):
         # A client health check (claude mcp list) starts the server, lists the tools and
         # stops it. That must not use up the folder of the real session.

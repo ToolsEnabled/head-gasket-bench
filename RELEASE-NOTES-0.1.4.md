@@ -17,6 +17,9 @@ existing destination, creates a per-user private destination and prints MCP
 configuration without editing any client settings. It requires no WSL, Unix
 runtime, service, compiler, pip installation or global PATH change.
 
+The Windows CLI explicitly uses UTF-8 for protocol output and diagnostics,
+including Unicode request identifiers and paths, without CRLF translation.
+
 The launcher reports 0.1.4. The scientific runtime, source epochs, configurations,
 scorer, records, board and paper retain their published bytes. The pinned MCP
 serverInfo version remains 0.1.0. Exact record replay still requires the Python

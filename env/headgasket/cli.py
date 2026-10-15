@@ -840,6 +840,13 @@ def build_parser():
 
 
 def main(argv=None):
+    if os.name == 'nt':
+        # MCP is UTF-8 even when Python is attached to Windows pipes under a
+        # legacy console code page. Prevent CRLF translation on protocol output.
+        for stream in (sys.stdout, sys.stderr):
+            if hasattr(stream, 'reconfigure'):
+                stream.reconfigure(encoding='utf-8',
+                                   errors='strict' if stream is sys.stdout else 'backslashreplace', newline='\n')
     args = build_parser().parse_args(argv)
     try:
         return args.func(args)
