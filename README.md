@@ -313,3 +313,9 @@ Security problems: see [SECURITY.md](SECURITY.md).
 Citation: [CITATION.cff](CITATION.cff).
 
 ToolsEnabled is not affiliated with or endorsed by Anthropic, OpenAI or any other AI provider.
+
+## Codex plugin candidate (unreleased)
+
+See [Codex marketplace setup](CODEX.md) for branch installation, supported scope,
+external data and current qualification limits. This self-distribution candidate
+is separate from OpenAI public-directory review.
