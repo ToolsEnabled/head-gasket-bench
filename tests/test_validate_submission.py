@@ -67,7 +67,8 @@ def canonical(value):
 
 
 def helper(*args):
-    done = subprocess.run([sys.executable, '-B', '-c', HELPER, *args], cwd=ENV, stdout=subprocess.PIPE,
+    code = 'import sys; sys.path.insert(0, ' + repr(str(ENV)) + ')\n' + HELPER
+    done = subprocess.run([sys.executable, '-B', '-c', code, *args], cwd=ENV, stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE, timeout=1800, check=False)
     if done.returncode != 0:
         raise AssertionError(done.stderr.decode())

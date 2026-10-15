@@ -117,6 +117,7 @@ CASES = {
 
 
 def child(code, args, cwd):
+    code = 'import sys; sys.path.insert(0, ' + repr(str(cwd)) + ')\n' + code
     done = subprocess.run([sys.executable, '-B', '-c', code, *args], cwd=cwd, stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE, timeout=3600, check=False)
     if done.returncode != 0:

@@ -25,7 +25,7 @@ Checks, in order; the first failure ends the run:
              for a maintainer's review
   pins       configuration is one of env/'s pinned V1-V5 configurations and the
              runtime is env/'s current source manifest; same CPython version
-  replay     python3 -m headgasket replay (from env/) reproduces run.json exactly
+  replay     the shipped env/bin/headgasket-mcp launcher reproduces run.json exactly
   scorer     scorer/hgj_scorer.py score accepts the record and agrees with the
              environment's embedded score on every primary checkpoint and on every
              shared field both scorers determine; RESULT.md is exactly the file
@@ -503,7 +503,7 @@ def run_json(command, cwd, check, timeout):
 
 
 def check_replay(run_path):
-    out = run_json([sys.executable, '-B', '-m', 'headgasket', 'replay', '--record', str(run_path)], ENV, 'replay', 3600)
+    out = run_json([sys.executable, '-B', str(ENV / 'bin' / 'headgasket-mcp'), 'replay', '--record', str(run_path)], ENV, 'replay', 3600)
     try:
         result = json.loads(out.decode('utf-8').strip().splitlines()[-1])
     except (ValueError, IndexError):
