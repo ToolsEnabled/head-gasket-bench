@@ -51,6 +51,9 @@ class WindowsFolderTests(unittest.TestCase):
                 win.free(descriptor)
             with self.assertRaisesRegex(OSError, 'other users can write'):
                 win.lock_folder(out)
+            # A second attempt still refuses: inspecting did not repair the ACL.
+            with self.assertRaisesRegex(OSError, 'other users can write'):
+                win.lock_folder(out)
 
     def test_a_different_owner_sid_is_refused(self):
         from headgasket import windows_folder as win
@@ -71,8 +74,8 @@ class WindowsFolderTests(unittest.TestCase):
                 win.free(descriptor)
             with self.assertRaisesRegex(OSError, 'belongs to another user'):
                 win.lock_folder(out)
-            # A second attempt still refuses: inspecting did not repair the ACL.
-            with self.assertRaisesRegex(OSError, 'other users can write'):
+            # Inspection also leaves the alternate owner unchanged.
+            with self.assertRaisesRegex(OSError, 'belongs to another user'):
                 win.lock_folder(out)
 
     def test_junction_ancestor_is_refused(self):
