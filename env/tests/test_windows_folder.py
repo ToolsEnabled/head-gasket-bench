@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -87,6 +88,69 @@ class WindowsFolderTests(unittest.TestCase):
                 first.close()
             second = lock_folder(out)
             second.close()
+
+    def test_retained_folder_allows_the_pinned_atomic_writer(self):
+        from headgasket.windows_folder import create_run_directory, lock_folder
+        from hgj.mcp import atomic_bytes
+        with tempfile.TemporaryDirectory() as temp:
+            out = Path(temp) / 'run'
+            create_run_directory(out)
+            lock = lock_folder(out)
+            try:
+                # Both CREATE and REPLACE must work under the real lifetime
+                # lock, without changing the scientific environment's writer.
+                for payload in (b'{"native":"first"}\n', b'{"native":"replace"}\n'):
+                    atomic_bytes(out / 'run.json', payload)
+                    self.assertEqual((out / 'run.json').read_bytes(), payload)
+                self.assertFalse((out / 'run.json.tmp').exists())
+                with self.assertRaisesRegex(OSError, 'another headgasket server'):
+                    lock_folder(out)
+            finally:
+                lock.close()
+
+    def test_writer_lease_is_released_after_known_child_process_death(self):
+        from headgasket import windows_folder as win
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            out, ready, script = base / 'run', base / 'ready.json', base / 'holder.py'
+            win.create_run_directory(out)
+            script.write_text(
+                'import json, os, sys, time\n'
+                f'sys.path.insert(0, {str(ROOT)!r})\n'
+                'from pathlib import Path\n'
+                'from headgasket.windows_folder import lock_folder\n'
+                'lock = lock_folder(Path(sys.argv[1]))\n'
+                'Path(sys.argv[2]).write_text(json.dumps({"pid": os.getpid()}), encoding="utf-8")\n'
+                'time.sleep(60)\n', encoding='utf-8')
+            child = subprocess.Popen([sys.executable, '-I', '-S', '-B', str(script), str(out), str(ready)],
+                                     stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE, close_fds=True)
+            wait = win.api(win.k, 'WaitForSingleObject', [win.w.HANDLE, win.w.DWORD], win.w.DWORD)
+            try:
+                deadline = time.monotonic() + 10
+                while not ready.exists():
+                    if child.poll() is not None:
+                        _, stderr = child.communicate(timeout=5)
+                        self.fail('known holder exited before readiness: ' + stderr.decode('utf-8', errors='replace'))
+                    self.assertLess(time.monotonic(), deadline, 'known holder readiness timed out')
+                    time.sleep(0.025)
+                self.assertEqual(json.loads(ready.read_text(encoding='utf-8')), {'pid': child.pid})
+                self.assertEqual(wait(int(child._handle), 0), 258)
+                with self.assertRaisesRegex(OSError, 'another headgasket server'):
+                    win.lock_folder(out)
+                # Popen retains the process HANDLE; this never selects a process
+                # by name or a potentially reused PID.
+                child.terminate()
+                self.assertEqual(wait(int(child._handle), 5000), 0)
+                _, stderr = child.communicate(timeout=5)
+                self.assertEqual(stderr, b'')
+                second = win.lock_folder(out)
+                second.close()
+                self.assertEqual(list(out.iterdir()), [])
+            finally:
+                if child.poll() is None:
+                    child.kill()
+                child.communicate(timeout=5)
 
     def test_broad_acl_is_refused_without_repair(self):
         from headgasket import windows_folder as win

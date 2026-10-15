@@ -6,6 +6,8 @@ SYSTEM and Administrators remain trusted, as they are by Windows file security.
 """
 import ctypes as c
 from ctypes import wintypes as w
+import hashlib
+import json
 import os
 from pathlib import Path
 
@@ -63,6 +65,14 @@ volume_info = api(k, 'GetVolumeInformationByHandleW', [w.HANDLE, w.LPWSTR, w.DWO
                                                     c.c_void_p, c.c_void_p, c.c_void_p,
                                                     w.LPWSTR, w.DWORD])
 drive_type = api(k, 'GetDriveTypeW', [w.LPCWSTR], w.UINT)
+create_pipe = api(k, 'CreateNamedPipeW', [w.LPCWSTR, w.DWORD, w.DWORD,
+                  w.DWORD, w.DWORD, w.DWORD, w.DWORD, c.POINTER(Security)], w.HANDLE)
+handle_info = api(k, 'GetHandleInformation', [w.HANDLE, c.POINTER(w.DWORD)])
+pipe_info = api(k, 'GetNamedPipeInfo', [w.HANDLE, c.POINTER(w.DWORD),
+                c.POINTER(w.DWORD), c.POINTER(w.DWORD), c.POINTER(w.DWORD)])
+descriptor_control = api(a, 'GetSecurityDescriptorControl',
+                         [c.c_void_p, c.POINTER(w.WORD), c.POINTER(w.DWORD)])
+sid_length = api(a, 'GetLengthSid', [c.c_void_p], w.DWORD)
 
 
 def check(ok):
@@ -192,8 +202,97 @@ class FolderLock:
 
     def close(self):
         handles, self.handles = self.handles, []
+        failure = None
         for handle in reversed(handles):
-            close(handle)
+            if not close(handle) and failure is None:
+                failure = c.WinError(c.get_last_error())
+        if failure is not None:
+            raise failure
+
+
+def _sid_text(pointer):
+    text = c.c_void_p()
+    check(sid_string(pointer, c.byref(text)))
+    try:
+        return c.wstring_at(text)
+    finally:
+        free(text)
+
+
+def _check_writer_security(handle, sid):
+    """Read back the exact protected descriptor of our new kernel lease."""
+    owner, dacl, descriptor = c.c_void_p(), c.c_void_p(), c.c_void_p()
+    error = get_security(handle, 1, 5, c.byref(owner), None,
+                         c.byref(dacl), None, c.byref(descriptor))
+    if error:
+        raise c.WinError(error)
+    try:
+        if _sid_text(owner) != sid or not dacl:
+            raise OSError('private writer lease owner or DACL differs')
+        control, revision = w.WORD(), w.DWORD()
+        check(descriptor_control(descriptor, c.byref(control), c.byref(revision)))
+        if not control.value & 0x1000:
+            raise OSError('private writer lease DACL is not protected')
+        details = AclInfo()
+        check(acl_info(dacl, c.byref(details), c.sizeof(details), 2))
+        if details.count != 3:
+            raise OSError('private writer lease ACL census differs')
+        principals = set()
+        for index in range(details.count):
+            ace = c.c_void_p()
+            check(get_ace(dacl, index, c.byref(ace)))
+            if (c.c_ubyte.from_address(ace.value).value != 0
+                    or c.c_ubyte.from_address(ace.value + 1).value != 0):
+                raise OSError('unrecognized private writer lease ACL entry')
+            principal = c.c_void_p(ace.value + 8)
+            if (w.WORD.from_address(ace.value + 2).value != 8 + sid_length(principal)
+                    or w.DWORD.from_address(ace.value + 4).value != 0x1f01ff):
+                raise OSError('private writer lease ACL grant differs')
+            principals.add(_sid_text(principal))
+        if principals != {sid, 'S-1-5-18', 'S-1-5-32-544'}:
+            raise OSError('private writer lease grants another principal access')
+    finally:
+        free(descriptor)
+
+
+def _writer_handle(identity):
+    """Single writer across processes/sessions, keyed by retained NTFS identity.
+
+    No pipe connection, read or write is performed. The first-instance handle
+    is only a lifetime lease; pathname and other-account protection comes from
+    the retained directory handles and their unchanged owner/ACL checks.
+    """
+    sid = user()
+    key = json.dumps([sid, *identity], separators=(',', ':')).encode('ascii')
+    name = r'\\.\pipe\ToolsEnabled.HeadGasket.RunWriter.v1.' + hashlib.sha256(key).hexdigest()
+    descriptor = c.c_void_p()
+    sddl = f'O:{sid}G:{sid}D:P(A;;0x001f01ff;;;{sid})(A;;0x001f01ff;;;SY)(A;;0x001f01ff;;;BA)'
+    check(descriptor_parse(sddl, 1, c.byref(descriptor), None))
+    try:
+        security = Security(c.sizeof(Security), descriptor, False)
+        # FIRST_PIPE_INSTANCE, REJECT_REMOTE_CLIENTS and exactly one instance.
+        handle = create_pipe(name, 3 | 0x80000, 8, 1, 0, 0, 0, c.byref(security))
+        if handle == INVALID:
+            error = c.get_last_error()
+            if error in (5, 231):
+                raise OSError('another headgasket server is using this folder, or its private writer lease is unavailable') from c.WinError(error)
+            raise c.WinError(error)
+    finally:
+        free(descriptor)
+    try:
+        flags = w.DWORD()
+        check(handle_info(handle, c.byref(flags)))
+        if flags.value != 0:
+            raise OSError('private writer lease handle flags differ')
+        pipe_flags, maximum = w.DWORD(), w.DWORD()
+        check(pipe_info(handle, c.byref(pipe_flags), None, None, c.byref(maximum)))
+        if maximum.value != 1 or (pipe_flags.value & 9) != 9:
+            raise OSError('private writer lease server, instance or remote policy differs')
+        _check_writer_security(handle, sid)
+        return handle
+    except BaseException:
+        check(close(handle))
+        raise
 
 
 def lock_folder(value):
@@ -202,10 +301,11 @@ def lock_folder(value):
     try:
         for part in [*reversed(path.parents), path]:
             own = part == path
-            # FILE_ADD_FILE makes a second writer's open conflict. No delete
-            # sharing keeps every path component fixed for the server lifetime.
+            # Keep every component fixed without DELETE sharing. WRITE sharing
+            # is necessary for the pinned environment's atomic file replacement;
+            # a separate first-instance lease excludes another server.
             desired = 0x20081 | (2 if own else 0)
-            handle = open_file(str(part), desired, 1 if own else 3, None, 3,
+            handle = open_file(str(part), desired, 3, None, 3,
                                0x02200000, None)
             if handle == INVALID:
                 code = c.get_last_error()
@@ -213,7 +313,8 @@ def lock_folder(value):
                     raise OSError('another headgasket server is using this folder, or a path is open for replacement')
                 raise c.WinError(code)
             handles.append(handle)
-            inspect(handle, own=own)
+            identity = inspect(handle, own=own)
+        handles.append(_writer_handle(identity))
         return FolderLock(handles)
     except BaseException:
         FolderLock(handles).close()

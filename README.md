@@ -112,8 +112,11 @@ Run folders require fixed local NTFS, current-user ownership, private ACLs and o
 drive paths of at most240characters. Junctions/reparse ancestors, UNC/device
 paths, alternate streams and trailing dots/spaces are refused. New run folders
 are private before data is written; existing ACLs are never repaired. Windows
-holds directory handles for writer exclusion and protection against path
-replacement; SYSTEM/admin access is trusted. Same-user hostile code is outside
+holds directory handles against path replacement and a private first-instance
+kernel pipe handle for writer exclusion, keyed by the retained folder's NTFS
+identity and user SID. The pipe performs no connection, read or write. Directory
+write sharing permits the unchanged environment's atomic record replacement;
+delete sharing remains disabled. SYSTEM/admin access is trusted. Same-user hostile code is outside
 the boundary. An EOF ends the session and releases the lock. A killed unused
 start can be reclaimed only after its handles close and its existing files pass
 the same no-tool-call checks as Linux. Keep run records outside the install.

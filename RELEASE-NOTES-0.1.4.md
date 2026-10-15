@@ -5,8 +5,12 @@ notes bind the exact source/archive hashes and measured acceptance scope.
 
 The Windows launcher now creates run folders with a protected current-user DACL,
 checks real NTFS directory handles and ownership, refuses reparse ancestors and
-unsafe path forms, and retains an exclusive writer handle plus ancestor handles
-for the session lifetime. A second server cannot clear or reuse an active run.
+unsafe path forms, and retains non-delete-shared ancestor/folder handles plus a
+private first-instance kernel pipe lease for the session lifetime. The lease is
+keyed by the actual retained NTFS volume/file identity and current SID; it performs
+no pipe communication and rejects remote clients. Directory write sharing allows
+the pinned environment's atomic record replacement. A second server cannot clear
+or reuse an active run.
 SYSTEM and Administrators are trusted. This does not isolate hostile code running
 as the same user. Windows run folders currently require local NTFS and ordinary
 drive paths no longer than 240 characters; UNC, device namespaces and alternate
