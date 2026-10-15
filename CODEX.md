@@ -5,9 +5,29 @@ its source-bound launcher. This is a procedural benchmark game, not instructions
 for real engine repair and not a ToolsEnabled Bench or Engine Bench package.
 It is self-distributed; no OpenAI listing, endorsement or approval is claimed.
 
-Requires CPython 3.12 on PATH as `python3`; the canonical CLI refuses a different
+The Git marketplace requires CPython 3.12 on PATH as `python3`; the canonical CLI refuses a different
 interpreter. Published records require 3.12.3 for byte-exact replay. Linux is the
 qualified candidate host; native Windows/macOS Codex integration is unverified.
+
+The native Windows ZIP includes CPython3.12.3 and derives its Codex manifest to
+use `${PLUGIN_ROOT}/python/python.exe` directly. It never selects the machine's
+Python3.13 or a Windows Store alias. This one manifest derivation is recorded in
+WINDOWS-MANIFEST.json with the original source digest; other source bytes remain
+unchanged. For that route, verify and install the Windows ZIP first, then use
+the local installation as the marketplace source:
+
+```powershell
+codex plugin marketplace add 'C:\your\installed-head-gasket-bench'
+codex plugin add head-gasket-bench@head-gasket-bench-openai
+$env:HEADGASKET_RUN_DIR = 'C:\your\new-private-record'
+$env:HEADGASKET_VARIANT = 'V1'
+```
+
+Keep records outside the installation and plugin cache. The Git branch retains
+its Linux interpreter entry; use the verified Windows distribution on Windows.
+Native server execution and native Codex client/plugin acceptance are separate
+gates; the latter still requires owner acceptance. The launcher uses the
+[documented plugin-root placeholder](https://developers.openai.com/plugins/deploy/desktop-only).
 
 ```sh
 codex plugin marketplace add ToolsEnabled/head-gasket-bench --ref openai-plugin

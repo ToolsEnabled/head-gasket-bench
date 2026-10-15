@@ -35,8 +35,23 @@ def main():
         for entry in z.infolist():
             if not entry.is_dir():
                 files['python/' + entry.filename] = z.read(entry)
+    # Git uses the host interpreter on Linux. The native Windows distribution
+    # has its own pinned interpreter and a documented plugin-root launch path.
+    plugin_path = '.codex-plugin/plugin.json'
+    plugin_source = files[plugin_path]
+    plugin = json.loads(plugin_source)
+    entry = plugin['mcpServers']['headgasket']
+    if (entry['command'] != 'python3' or entry['args'] != ['./tools/codex-mcp.py']
+            or entry['cwd'] != './'):
+        raise SystemExit('Review changed Codex source entry before deriving the Windows manifest')
+    entry.update(command='${PLUGIN_ROOT}/python/python.exe',
+                 args=['-B', '${PLUGIN_ROOT}/tools/codex-mcp.py'], cwd='${PLUGIN_ROOT}')
+    files[plugin_path] = (json.dumps(plugin, indent=2) + '\n').encode('utf-8')
     manifest = {'schema': 'headgasket/windows-payload/v1', 'version': '0.1.4',
                 'sourceCommit': commit, 'pythonArchiveSha256': PIN,
+                'derivedFiles': [{'path': plugin_path,
+                                  'sourceSha256': hashlib.sha256(plugin_source).hexdigest(),
+                                  'reason': 'Windows Codex stdio uses bundled CPython via PLUGIN_ROOT'}],
                 'files': [{'path': name, 'bytes': len(raw), 'sha256': hashlib.sha256(raw).hexdigest()}
                           for name, raw in sorted(files.items())]}
     files['WINDOWS-MANIFEST.json'] = (json.dumps(manifest, indent=2) + '\n').encode()
