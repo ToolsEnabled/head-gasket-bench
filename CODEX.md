@@ -34,7 +34,7 @@ login and terms. The run folder retains run.json, actions.jsonl and report.json,
 including exactly the tool arguments supplied; inspect them before sharing.
 Uninstalling the plugin does not delete records. Stop its server before deleting
 or privately backing up the run folder. See [Privacy](env/PRIVACY.md),
-[Security](env/SECURITY.md) and the MIT license. The public
-[ToolsEnabled terms](https://toolsenabled.ai/terms/) currently describe Fleet;
-all-product terms coverage and directory review remain lead-owned pending gates.
+[Security](env/SECURITY.md) and the MIT license. No applicable Head Gasket Bench terms URL has been established; the live
+ToolsEnabled terms cover Fleet only, so Codex metadata deliberately omits that
+link. Product terms and directory review remain lead-owned pending gates.
 No submission or upload is performed by this package.

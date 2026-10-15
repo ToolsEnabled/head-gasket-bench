@@ -26,7 +26,7 @@
   },
   "interface": {
     "displayName": "Head Gasket Bench",
-    "shortDescription": "A recorded procedural benchmark through 18 local MCP tools; not real engine repair guidance.",
+    "shortDescription": "Run a procedural benchmark",
     "developerName": "ToolsEnabled, Inc.",
     "category": "Productivity",
     "capabilities": [
@@ -34,6 +34,8 @@
       "Write"
     ],
     "privacyPolicyURL": "https://github.com/ToolsEnabled/head-gasket-bench/blob/openai-plugin/env/PRIVACY.md",
-    "termsOfServiceURL": "https://toolsenabled.ai/terms/"
+    "longDescription": "A recorded procedural benchmark through 18 local MCP tools; not real engine repair guidance.",
+    "websiteURL": "https://github.com/ToolsEnabled/head-gasket-bench",
+    "supportURL": "https://github.com/ToolsEnabled/head-gasket-bench/issues"
   }
 }
