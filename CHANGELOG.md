@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.4 (Windows candidate, unpublished)
+## 0.1.4
 
 Native Windows NTFS run-folder ownership/ACL validation and lifetime writer and
 ancestor handles; protected directory creation; deterministic self-contained

@@ -88,11 +88,10 @@ it finished and left no record.
 
 ## Quick start
 
-### Windows candidate
+### Windows
 
-Native Windows work is on the `windows-port` branch and is **not yet a qualified
-release**. The candidate ZIP includes CPython3.12.3; do not substitute the
-machine's Python3.13. From a new folder, compare
+The Windows ZIP includes CPython 3.12.3; do not substitute the
+machine's Python 3.13. From a new folder, compare
 `(Get-FileHash .\head-gasket-bench-0.1.4-windows-x64.zip -Algorithm SHA256).Hash`
 with its `.sha256` sidecar, then use `Expand-Archive` and run `install.ps1`
 normally. `install.cmd` is the cmd entry point. The default installation is
@@ -119,10 +118,11 @@ the boundary. An EOF ends the session and releases the lock. A killed unused
 start can be reclaimed only after its handles close and its existing files pass
 the same no-tool-call checks as Linux. Keep run records outside the install.
 
-Five folder-security checks and pins passed on Windows10Pro22H2 build19045 under
-elevated SSH. Ordinary-user operation, final install/stdio acceptance and an
-independent fresh-folder pass are pending; Windows11 is untested. See
-[candidate release notes](RELEASE-NOTES-0.1.4.md). Linux instructions follow.
+The [GitHub release notes](https://github.com/ToolsEnabled/head-gasket-bench/releases/tag/v0.1.4)
+identify the exact tested archive, Windows build, token contexts and independent
+acceptance scope. Windows 11 and real Windows Codex client/GUI acceptance are
+unqualified without their own actual checks. See the
+[0.1.4 changes and boundaries](RELEASE-NOTES-0.1.4.md). Linux instructions follow.
 
 You need CPython 3.12 and nothing else: no pip install, no compiler, no
 browser. Check `python3 --version`; if it is not 3.12.x, write `python3.12`

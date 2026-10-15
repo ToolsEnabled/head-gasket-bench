@@ -1,6 +1,7 @@
-# Head Gasket Bench 0.1.4 — Windows candidate
+# Head Gasket Bench 0.1.4 — native Windows and Codex packaging
 
-Prepared on `windows-port`; not published and not ready for release.
+These are the changes and operating boundaries. The published GitHub release
+notes bind the exact source/archive hashes and measured acceptance scope.
 
 The Windows launcher now creates run folders with a protected current-user DACL,
 checks real NTFS directory handles and ownership, refuses reparse ancestors and
@@ -25,9 +26,18 @@ scorer, records, board and paper retain their published bytes. The pinned MCP
 serverInfo version remains 0.1.0. Exact record replay still requires the Python
 patch version that made the record.
 
-Qualification so far: Linux launcher suite 26/26 on the pre-version-change
-candidate; five native folder/ACL/lock/path tests and scientific pins on Windows
-10 Pro 22H2 build19045 with CPython3.12.3. These native checks used elevated SSH.
-Final candidate installation, stdio replay/verify, expanded security checks,
-independent fresh-folder review and ordinary-user acceptance remain pending.
-Windows11 has not been tested. Do not publish this candidate as qualified.
+The merged source's canonical Linux CLI suite passes 27/27; the Codex launcher
+checks pass 3/3. Native qualification uses the bundled interpreter, fresh folders,
+actual NTFS owner/raw-DACL/ancestor and writer-lock checks, Unicode stdio/record
+verification, elevated engineering and a calibrated restricted medium token,
+then a different worker's documented fresh-user pass. Consult the published
+release receipt for those measured results rather than treating Linux skips or
+predecessor native runs as evidence for a new archive. Windows 11 is untested.
+Real Windows Codex host and console GUI acceptance remain owner-only.
+
+The self-distributed Codex plugin keeps records outside the installation/cache,
+forwards only the selected run folder/variant, and starts the canonical CLI
+without installing packages or selecting a provider. The Windows ZIP's manifest
+uses the bundled 3.12.3 interpreter through PLUGIN_ROOT; the Git/Linux manifest
+retains python3. Windows server-entry tests do not prove a real Codex client
+accepted that manifest. No OpenAI directory listing or approval is claimed.
