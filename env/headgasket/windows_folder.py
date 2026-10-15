@@ -140,6 +140,8 @@ def inspect(handle, own=False):
             trusted.append(ptr)
         if own and not sid_equal(owner, trusted[0]):
             raise OSError('--out belongs to another user; choose a new folder')
+        if not own and not any(sid_equal(owner, sid) for sid in trusted):
+            raise OSError('a run-folder ancestor belongs to an untrusted account')
         if not dacl:
             raise OSError('--out has a null DACL; other users can write to it')
         details = AclInfo()

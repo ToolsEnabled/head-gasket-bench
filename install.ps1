@@ -6,6 +6,15 @@ $Destination = [IO.Path]::GetFullPath($Destination)
 if (Test-Path -LiteralPath $Destination) { throw 'Destination already exists. Choose a new folder; nothing has been changed.' }
 for ($parent = [IO.Directory]::GetParent($Destination); $parent; $parent = $parent.Parent) {
   if ($parent.Exists -and ($parent.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Reparse-point install ancestors are refused.' }
+  if ($parent.Exists) {
+    $parentAcl = Get-Acl -LiteralPath $parent.FullName
+    $currentSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+    $trusted = @($currentSid,'S-1-5-18','S-1-5-32-544')
+    if ($trusted -notcontains $parentAcl.GetOwner([Security.Principal.SecurityIdentifier]).Value) { throw 'An install ancestor belongs to an untrusted account.' }
+    foreach ($rule in $parentAcl.GetAccessRules($true,$true,[Security.Principal.SecurityIdentifier])) {
+      if ($rule.AccessControlType -eq 'Allow' -and $rule.PropagationFlags -notlike '*InheritOnly*' -and $trusted -notcontains $rule.IdentityReference.Value -and ([long]$rule.FileSystemRights -band 0x500D0140)) { throw 'Another account can replace an install ancestor; choose a private destination.' }
+    }
+  }
 }
 $manifest = Get-Content -LiteralPath (Join-Path $source 'WINDOWS-MANIFEST.json') -Raw | ConvertFrom-Json
 if ($manifest.schema -ne 'headgasket/windows-payload/v1') { throw 'Unrecognized payload manifest.' }
