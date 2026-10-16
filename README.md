@@ -34,7 +34,15 @@ and asks it to repair one.
 | [`tools/`](tools/) | `validate_submission.py`, `build_board.py`, `check_pr_scope.py` (the pull-request scope check), `claude-code-proxy.py`, `make_release.sh` | MIT |
 | [`BENCHMARK-CARD.md`](BENCHMARK-CARD.md), [`REPRODUCIBILITY.md`](REPRODUCIBILITY.md) | What the benchmark is and is not; how to replay, rescore and collect | CC BY 4.0 |
 
-## Results so far
+## October 2026 orchestration study
+
+**The only two full repairs (18/18) in round 2 came from Fleet with one lead and four workers.** Mean points out of 18: Fleet 1+4, 12.75; Fleet 1+2×2, 11.5; Codex native subagents, 7.5; single agent, 5.75.
+
+Sixteen runs, four per setup, on one deterministic V1 task in Head Gasket Bench 0.1.3, with enforced lead-only finish. All runs requested gpt-6-luna at max reasoning effort through Codex CLI 0.162.1; requested model labels do not independently attest served weights. The benchmark environment and independent scorer agreed on all 16 round-2 scores. **Four repetitions of one task cannot rank the arms.**
+
+[Read the study, both rounds, methods and limitations](docs/studies/fleet-2026-10/README.md).
+
+## Earlier results
 
 The paper's three exploratory runs on the standard job (V1), one per model,
 plus the scripted reference (from the paper's Table 1):
@@ -67,8 +75,9 @@ scored results only, in [runs/exploratory](runs/exploratory/README.md)):
 | Claude Code, effort max | claude-opus-5-5 | 5 | 16, 16, 16, 16, 16 | 0% | CP12 in each |
 | Claude Code | claude-haiku-5-5 | 3 | 14, 12, 12 | 0% | CP02 and CP12 in each, CP11 in two |
 
-No agent has completed the job correctly. The highest agent score so far is 16 of
-18 points, by `claude-opus-5-5` at effort max, in 5 of 5 finished runs; the
+In these pre-study runs, no agent completed the job correctly. The highest
+agent score in this earlier cohort was 16 of 18 points, by `claude-opus-5-5`
+at effort max, in 5 of 5 finished runs; the
 scripted correct job scores 18 of 18. All five lost CP12 (reassembly complete) in
 the same way: the agent removed the old head gasket and fitted the new one from
 supply with `install`, instead of exchanging the old gasket for it with
